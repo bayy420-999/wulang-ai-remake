@@ -1,0 +1,45 @@
+{
+  "name": "wulang-ai-bot",
+  "version": "1.0.0",
+  "description": "WhatsApp AI Bot using WWebJS, Prisma, and GPT-4o-mini",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:migrate": "prisma migrate dev",
+    "db:studio": "prisma studio"
+  },
+  "keywords": [
+    "whatsapp",
+    "bot",
+    "ai",
+    "typescript",
+    "prisma"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@ai-sdk/openai": "^2.0.19",
+    "@prisma/client": "^5.19.1",
+    "@types/pdf-parse": "^1.1.5",
+    "ai": "^5.0.22",
+    "dotenv": "^16.4.5",
+    "jimp": "^0.22.12",
+    "openai": "^4.56.0",
+    "pdf-parse": "^1.1.1",
+    "prisma": "^5.19.1",
+    "qrcode-terminal": "^0.12.0",
+    "whatsapp-web.js": "^1.25.0",
+    "winston": "^3.14.2",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^22.5.0",
+    "@types/qrcode-terminal": "^0.12.2",
+    "tsx": "^4.17.0",
+    "typescript": "^5.5.4"
+  }
+}

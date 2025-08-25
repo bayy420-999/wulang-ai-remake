@@ -1,0 +1,40 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  phone         String    @unique
+  name          String?
+  messages      Message[]
+  isActive      Boolean   @default(true)
+  lastMessageAt DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@map("users")
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  role      Role
+  content   String
+  metadata  Json?    // For storing additional context like file info, media types, etc.
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  createdAt DateTime @default(now())
+
+  @@map("messages")
+  @@index([userId, createdAt])
+}
+
+enum Role {
+  USER
+  ASSISTANT
+  SYSTEM
+}
