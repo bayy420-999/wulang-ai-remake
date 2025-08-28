@@ -1,3 +1,4 @@
+// schema.prisma
 generator client {
   provider = "prisma-client-js"
 }
@@ -7,34 +8,52 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// User who chats with the bot
 model User {
-  id            String    @id @default(cuid())
-  phone         String    @unique
+  id            String         @id @default(cuid())
+  phoneNumber   String         @unique
   name          String?
-  messages      Message[]
-  isActive      Boolean   @default(true)
-  lastMessageAt DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-
-  @@map("users")
+  conversations Conversation[]
+  media         Media[]
+  createdAt     DateTime       @default(now())
 }
 
-model Message {
-  id        String   @id @default(cuid())
-  role      Role
-  content   String
-  metadata  Json?    // For storing additional context like file info, media types, etc.
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+// A conversation thread (can reset for new topics)
+model Conversation {
+  id        String    @id @default(cuid())
+  user      User      @relation(fields: [userId], references: [id])
   userId    String
-  createdAt DateTime @default(now())
+  messages  Message[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
 
-  @@map("messages")
-  @@index([userId, createdAt])
+// Messages in a conversation
+model Message {
+  id             String        @id @default(cuid())
+  role           Role
+  content        String?       // text content
+  mediaId        String?       // if media is attached
+  media          Media?        @relation(fields: [mediaId], references: [id])
+  conversation   Conversation  @relation(fields: [conversationId], references: [id])
+  conversationId String
+  createdAt      DateTime      @default(now())
 }
 
 enum Role {
   USER
   ASSISTANT
   SYSTEM
+}
+
+// Media files uploaded (image/pdf/etc.)
+model Media {
+  id        String    @id @default(cuid())
+  url       String    // where the file is stored (S3/Cloudinary/local)
+  type      String    // "image", "pdf", etc.
+  summary   String?   // optional AI-generated summary/parsed text
+  user      User      @relation(fields: [userId], references: [id])
+  userId    String
+  messages  Message[] // relation to messages that use this media
+  createdAt DateTime  @default(now())
 }

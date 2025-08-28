@@ -1,16 +1,20 @@
 # Wulang AI - WhatsApp AI Bot
 
-A sophisticated WhatsApp AI bot built with TypeScript that can process text messages, PDFs, and images using GPT-4o-mini. The bot maintains conversation context and stores all interactions in a PostgreSQL database.
+A sophisticated WhatsApp AI bot built with TypeScript that can process text messages, PDFs, and images using GPT-4o-mini. The bot maintains conversation context and stores all interactions in a PostgreSQL database with proper conversation management.
 
 ## 🚀 Features
 
-- **Smart Conversation Management**: Detects trigger keywords and maintains conversation context
-- **Media Processing**: Handles PDF text extraction and image analysis
-- **Database Storage**: Stores all conversations in PostgreSQL with Prisma ORM
-- **Context Awareness**: Maintains conversation history for intelligent responses
+- **Smart Conversation Management**: Detects trigger keywords and maintains conversation context with proper conversation threads
+- **Media Processing**: Handles PDF text extraction and image analysis with proper media storage and AI-generated summaries
+- **Advanced Database Architecture**: Stores all data in PostgreSQL with Prisma ORM using a sophisticated schema:
+  - **User Management**: Tracks users by phone number with conversation history
+  - **Conversation Threads**: Organizes messages into conversation threads for better context management
+  - **Message Storage**: Stores messages with role-based system (USER, BOT, SYSTEM) and optional media attachments
+  - **Media Management**: Stores media files with AI-generated summaries and proper file type classification
+- **Context Awareness**: Maintains conversation history for intelligent responses across conversation threads
 - **Content Moderation**: Basic content filtering for inappropriate messages
 - **Graceful Shutdown**: Handles process signals for clean shutdowns
-- **Automatic Maintenance**: Periodic cleanup of old data and temporary files
+- **Automatic Maintenance**: Periodic cleanup of old conversations and temporary files
 - **Comprehensive Logging**: Detailed logging with Winston
 
 ## 📋 Requirements
@@ -112,6 +116,7 @@ npm run db:studio
 2. **Existing Users**: Once you have conversation history, you can send messages without the trigger keyword
 3. **Media Support**: Send PDFs or images along with your messages for AI analysis
 4. **Context Maintenance**: The bot remembers your last 10 messages for context-aware responses
+5. **Conversation Management**: Each user can have multiple conversation threads
 
 ## 🏗️ Architecture
 
@@ -121,12 +126,25 @@ src/
 ├── lib/             # Utilities (database connection, logging)
 ├── services/        # Core services
 │   ├── ai.ts        # AI service with Vercel AI SDK
-│   ├── database.ts  # Database operations
+│   ├── database.ts  # Database operations with conversation management
 │   ├── media.ts     # PDF and image processing
-│   ├── whatsapp.ts  # WhatsApp client management
-│   └── messageProcessor.ts  # Main bot logic
+│   └── whatsappBot.ts  # Main bot logic and WhatsApp integration
 ├── prisma/          # Database schema
 └── index.ts         # Application entry point
+```
+
+### Clean Architecture Layers
+
+```
+┌─────────────────┐
+│   Presentation  │ ← WhatsAppBot (WhatsApp interface)
+├─────────────────┤
+│   Application   │ ← Message processing, media handling, AI integration
+├─────────────────┤  
+│   Domain        │ ← User, Message, Conversation entities
+├─────────────────┤
+│   Infrastructure│ ← DatabaseService, AIService, MediaService
+└─────────────────┘
 ```
 
 ## 🔧 Configuration Options
@@ -142,23 +160,50 @@ src/
 | `SESSION_NAME` | WhatsApp session identifier | "wulang-ai-session" |
 | `LOG_LEVEL` | Logging level (error/warn/info/debug) | "info" |
 
-## 📊 Database Schema
+## 📊 Database Schema (Updated)
 
-### Users Table
-- `id` - Unique identifier
-- `phone` - WhatsApp phone number
-- `name` - User's display name
-- `isActive` - Whether user is active
-- `lastMessageAt` - Last message timestamp
-- `createdAt` - Account creation time
+The application uses a sophisticated database schema designed for optimal conversation management and media handling:
 
-### Messages Table
-- `id` - Unique identifier
-- `role` - Message role (USER/ASSISTANT/SYSTEM)
-- `content` - Message content
-- `metadata` - Additional metadata (JSON)
-- `userId` - Reference to user
+### User Model
+- `id` - Unique identifier (CUID)
+- `phoneNumber` - WhatsApp phone number (unique)
+- `name` - User's display name (optional)
+- `conversations` - One-to-many relationship with conversations
+- `media` - One-to-many relationship with uploaded media
+- `createdAt` - Account creation timestamp
+
+### Conversation Model
+- `id` - Unique identifier (CUID)
+- `userId` - Foreign key to user
+- `messages` - One-to-many relationship with messages
+- `createdAt` - Conversation creation timestamp
+- `updatedAt` - Last activity timestamp (auto-updated)
+
+### Message Model
+- `id` - Unique identifier (CUID)
+- `role` - Message role enum (USER, BOT, SYSTEM)
+- `content` - Message text content (optional for media messages)
+- `mediaId` - Foreign key to media (optional)
+- `conversationId` - Foreign key to conversation
+- `media` - One-to-one relationship with media
+- `conversation` - Many-to-one relationship with conversation
 - `createdAt` - Message timestamp
+
+### Media Model
+- `id` - Unique identifier (CUID)
+- `url` - File storage location (S3/Cloudinary/local)
+- `type` - Media type classification (image, pdf, etc.)
+- `summary` - AI-generated summary/parsed text (optional)
+- `userId` - Foreign key to user
+- `messages` - One-to-many relationship with messages using this media
+- `createdAt` - Upload timestamp
+
+### Key Features of the New Schema:
+- **Conversation Threading**: Messages are organized into conversation threads for better context management
+- **Media Integration**: Media files are properly linked to messages and users
+- **Role-Based Messaging**: Clear distinction between user, bot, and system messages
+- **Automatic Timestamps**: Created and updated timestamps for tracking conversation activity
+- **Cascading Deletes**: Proper cleanup when conversations or users are deleted
 
 ## 🔒 Security Features
 
@@ -184,11 +229,10 @@ src/
 
 ### Key Services
 
-1. **WhatsAppService**: Handles WhatsApp Web client connection and message handling
+1. **WhatsAppBot**: Main bot class handling WhatsApp integration, message processing, and bot lifecycle
 2. **AIService**: Manages OpenAI API interactions and conversation generation
-3. **DatabaseService**: Handles all database operations with Prisma
+3. **DatabaseService**: Handles all database operations with Prisma and conversation management
 4. **MediaService**: Processes PDFs and images for AI context
-5. **MessageProcessor**: Core bot logic and message routing
 
 ## 📝 Logging
 
@@ -201,7 +245,7 @@ The bot uses Winston for comprehensive logging:
 ## 🔄 Maintenance
 
 The bot automatically performs maintenance tasks:
-- Cleanup of old messages (90+ days)
+- Cleanup of old conversations (90+ days)
 - Removal of temporary files
 - Database optimization
 - Runs every 24 hours or manually via API
@@ -261,3 +305,4 @@ If you encounter any issues:
 - PostgreSQL database should be regularly backed up
 - Media files are temporarily stored and cleaned up automatically
 - Bot responses are limited to 500 tokens for WhatsApp compatibility
+- Conversations are managed as separate threads for better context management
