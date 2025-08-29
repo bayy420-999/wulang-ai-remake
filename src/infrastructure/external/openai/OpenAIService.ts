@@ -35,45 +35,66 @@ export class OpenAIService implements IAIService {
   async generateWelcomeMessage(userName?: string): Promise<string> {
     try {
       const welcomePrompt = userName 
-        ? `Generate a warm welcome message for ${userName} in Indonesian. Keep it friendly and under 100 words.`
-        : 'Generate a warm welcome message in Indonesian. Keep it friendly and under 100 words.';
+        ? `Buat pesan selamat datang yang hangat untuk ${userName} sebagai Wulang, asisten virtual dari Kelas Inovatif. Sambut mereka ke komunitas penulisan akademik dan jelaskan bagaimana kamu dapat membantu kebutuhan penulisan akademik mereka. Buat pesan yang ramah, profesional, dan di bawah 150 kata dalam bahasa Indonesia.`
+        : 'Buat pesan selamat datang yang hangat sebagai Wulang, asisten virtual dari Kelas Inovatif. Sambut mereka ke komunitas penulisan akademik dan jelaskan bagaimana kamu dapat membantu kebutuhan penulisan akademik mereka. Buat pesan yang ramah, profesional, dan di bawah 150 kata dalam bahasa Indonesia.';
+
+      // Create a minimal context for the system prompt
+      const context: ConversationContext = {
+        userPhone: 'User',
+        userName: userName || 'User',
+        messages: []
+      };
 
       const { text } = await generateText({
         model: openai(env.OPENAI_MODEL),
         messages: [
-          { role: 'system', content: 'You are a helpful AI assistant. Respond in Indonesian.' },
+          { role: 'system', content: this.buildSystemPrompt(context) },
           { role: 'user', content: welcomePrompt }
         ],
         temperature: 0.7,
       });
 
-      return text || 'Selamat datang! Saya siap membantu Anda.';
+      return text || 'Selamat datang di Kelas Inovatif! Saya Wulang, asisten virtual yang siap membantu Anda dalam penulisan karya ilmiah.';
     } catch (error) {
       logError('Error generating welcome message', error as Error, 'OpenAIService');
-      return 'Selamat datang! Saya siap membantu Anda.';
+      return 'Selamat datang di Kelas Inovatif! Saya Wulang, asisten virtual yang siap membantu Anda dalam penulisan karya ilmiah.';
     }
   }
 
   async generateResetMessage(): Promise<string> {
     try {
+      // Create a minimal context for the system prompt
+      const context: ConversationContext = {
+        userPhone: 'User',
+        userName: 'User',
+        messages: []
+      };
+
       const { text } = await generateText({
         model: openai(env.OPENAI_MODEL),
         messages: [
-          { role: 'system', content: 'You are a helpful AI assistant. Respond in Indonesian.' },
-          { role: 'user', content: 'Generate a friendly message confirming that conversation history has been reset. Keep it under 50 words.' }
+          { role: 'system', content: this.buildSystemPrompt(context) },
+          { role: 'user', content: 'Buat pesan ramah yang mengkonfirmasi bahwa riwayat percakapan telah direset dan kita dapat memulai segar dengan bantuan penulisan akademik. Buat pesan di bawah 60 kata.' }
         ],
         temperature: 0.7,
       });
 
-      return text || '✅ Riwayat percakapan telah direset. Mari mulai percakapan baru!';
+      return text || '✅ Riwayat percakapan telah direset. Mari mulai sesi baru untuk membantu Anda dengan penulisan karya ilmiah!';
     } catch (error) {
       logError('Error generating reset message', error as Error, 'OpenAIService');
-      return '✅ Riwayat percakapan telah direset. Mari mulai percakapan baru!';
+      return '✅ Riwayat percakapan telah direset. Mari mulai sesi baru untuk membantu Anda dengan penulisan karya ilmiah!';
     }
   }
 
   async analyzeMedia(mediaContext: MediaContext): Promise<string> {
     try {
+      // Create a minimal context for the system prompt
+      const context: ConversationContext = {
+        userPhone: 'User',
+        userName: 'User',
+        messages: []
+      };
+
       if (mediaContext.type === 'image' && mediaContext.data) {
         // For images, generate a comprehensive summary for database storage
         const { text } = await generateText({
@@ -81,23 +102,27 @@ export class OpenAIService implements IAIService {
           messages: [
             { 
               role: 'system', 
-              content: `You are a helpful AI assistant. Analyze the image and provide a comprehensive, detailed summary in Indonesian that captures all important details. This summary will be stored in a database and used for future reference, so make it as complete and detailed as possible.
+              content: this.buildSystemPrompt(context) + `
 
-Include in your analysis:
-- Main subjects and objects in the image
-- Colors, textures, and visual elements
-- Spatial relationships and composition
-- Any text, numbers, or symbols visible
-- Mood, atmosphere, or context
-- Technical details (if relevant)
-- Any notable or unusual features
+TUGAS KHUSUS ANALISIS GAMBAR:
+Analisis gambar ini dan berikan ringkasan komprehensif dalam bahasa Indonesia yang menangkap semua detail penting. Ringkasan ini akan disimpan dalam database dan digunakan untuk referensi masa depan, jadi buatlah selengkap dan sedetail mungkin.
 
-Make the summary comprehensive enough that someone could ask follow-up questions about specific details in the image and you would have the information to answer them.` 
+Sertakan dalam analisis Anda:
+- Subjek dan objek utama dalam gambar
+- Warna, tekstur, dan elemen visual
+- Hubungan spasial dan komposisi
+- Teks, angka, atau simbol yang terlihat
+- Suasana, atmosfer, atau konteks
+- Detail teknis (jika relevan)
+- Fitur yang menonjol atau tidak biasa
+- Relevansi akademik (jika berlaku)
+
+Buat ringkasan yang komprehensif sehingga seseorang dapat mengajukan pertanyaan lanjutan tentang detail spesifik dalam gambar dan Anda memiliki informasi untuk menjawabnya.` 
             },
             { 
               role: 'user', 
               content: [
-                { type: 'text', text: 'Please provide a comprehensive analysis of this image in Indonesian. Include all important details that could be referenced in future conversations.' },
+                { type: 'text', text: 'Silakan berikan analisis komprehensif gambar ini dalam bahasa Indonesia. Sertakan semua detail penting yang dapat direferensikan dalam percakapan masa depan.' },
                 { type: 'image', image: mediaContext.data }
               ]
             }
@@ -113,20 +138,25 @@ Make the summary comprehensive enough that someone could ask follow-up questions
         messages: [
             { 
               role: 'system', 
-              content: `You are a helpful AI assistant. Analyze the PDF content and provide a comprehensive summary in Indonesian that captures all important information. This summary will be stored in a database and used for future reference, so make it as complete and detailed as possible.
+              content: this.buildSystemPrompt(context) + `
 
-Include in your analysis:
-- Main topics and themes
-- Key points and arguments
-- Important data, statistics, or facts
-- Structure and organization
-- Any conclusions or recommendations
-- Notable quotes or references
-- Technical terms or concepts
+TUGAS KHUSUS ANALISIS PDF:
+Analisis konten PDF ini dan berikan ringkasan komprehensif dalam bahasa Indonesia yang menangkap semua informasi penting. Ringkasan ini akan disimpan dalam database dan digunakan untuk referensi masa depan, jadi buatlah selengkap dan sedetail mungkin.
 
-Make the summary comprehensive enough that someone could ask follow-up questions about specific content and you would have the information to answer them.` 
+Sertakan dalam analisis Anda:
+- Topik dan tema utama
+- Poin-poin kunci dan argumen
+- Data, statistik, atau fakta penting
+- Struktur dan organisasi
+- Kesimpulan atau rekomendasi
+- Kutipan atau referensi yang menonjol
+- Istilah teknis atau konsep
+- Gaya penulisan akademik dan metodologi (jika berlaku)
+- Implikasi penelitian dan aplikasi
+
+Buat ringkasan yang komprehensif sehingga seseorang dapat mengajukan pertanyaan lanjutan tentang konten spesifik dan Anda memiliki informasi untuk menjawabnya.` 
             },
-            { role: 'user', content: `Analyze this PDF content and provide a comprehensive summary in Indonesian. Include all important information that could be referenced in future conversations. Content: ${mediaContext.content}` }
+            { role: 'user', content: `Analisis konten PDF ini dan berikan ringkasan komprehensif dalam bahasa Indonesia. Sertakan semua informasi penting yang dapat direferensikan dalam percakapan masa depan. Konten: ${mediaContext.content}` }
           ],
         temperature: 0.3,
       });
@@ -143,12 +173,19 @@ Make the summary comprehensive enough that someone could ask follow-up questions
 
   async analyzeMediaWithCaption(mediaContext: MediaContext, userCaption: string): Promise<string> {
     try {
+      // Create a minimal context for the system prompt
+      const context: ConversationContext = {
+        userPhone: 'User',
+        userName: 'User',
+        messages: []
+      };
+
       if (mediaContext.type === 'image' && mediaContext.data) {
         // For images with caption, send both image and text
         const { text } = await generateText({
           model: openai(env.OPENAI_MODEL),
           messages: [
-            { role: 'system', content: 'You are a helpful AI assistant. Analyze the image based on the user question and respond in Indonesian.' },
+            { role: 'system', content: this.buildSystemPrompt(context) },
             { 
               role: 'user', 
               content: [
@@ -166,8 +203,8 @@ Make the summary comprehensive enough that someone could ask follow-up questions
         const { text } = await generateText({
           model: openai(env.OPENAI_MODEL),
         messages: [
-            { role: 'system', content: 'You are a helpful AI assistant. Analyze PDF content and respond in Indonesian.' },
-            { role: 'user', content: `Analyze this PDF content based on the user's question: "${userCaption}". Provide a detailed answer in Indonesian. PDF content: ${mediaContext.content}` }
+            { role: 'system', content: this.buildSystemPrompt(context) },
+            { role: 'user', content: `Analisis konten PDF ini berdasarkan pertanyaan pengguna: "${userCaption}". Berikan jawaban detail dalam bahasa Indonesia. Konten PDF: ${mediaContext.content}` }
         ],
         temperature: 0.3,
       });
@@ -184,12 +221,19 @@ Make the summary comprehensive enough that someone could ask follow-up questions
 
   async moderateContent(content: string): Promise<ModerationResult> {
     try {
+      // Create a minimal context for the system prompt
+      const context: ConversationContext = {
+        userPhone: 'User',
+        userName: 'User',
+        messages: []
+      };
+
       // Using Vercel AI SDK for content moderation
       const { text } = await generateText({
         model: openai(env.OPENAI_MODEL),
         messages: [
-          { role: 'system', content: 'You are a content moderation system. Analyze the following content and respond with only "APPROPRIATE" or "INAPPROPRIATE".' },
-          { role: 'user', content: `Analyze this content: ${content}` }
+          { role: 'system', content: this.buildSystemPrompt(context) + '\n\nTUGAS KHUSUS MODERASI: Analisis konten berikut untuk kesesuaian akademik dan respons dengan hanya "APPROPRIATE" atau "INAPPROPRIATE".' },
+          { role: 'user', content: `Analisis konten ini: ${content}` }
         ],
         temperature: 0,
       });
@@ -210,17 +254,26 @@ Make the summary comprehensive enough that someone could ask follow-up questions
 
   private buildSystemPrompt(context: ConversationContext): string {
     const userName = context.userName || 'User';
-    return `You are ${env.BOT_NAME}, a helpful AI assistant. You are chatting with ${userName} (${context.userPhone}).
+    return `Kamu adalah Wulang, seorang virtual assistant dari Kelas Inovatif yang membantu mahasiswa, dosen, dan peneliti dalam penulisan karya ilmiah. Kamu memiliki keahlian lintas bidang akademik dan berperan memberikan saran, panduan praktis, serta contoh yang dapat langsung diterapkan, dengan tetap menjaga kualitas dan integritas akademik.
 
-Key Guidelines:
-- Always respond in Indonesian
-- Be friendly, helpful, and professional
-- Keep responses concise but informative
-- If you don't know something, say so honestly
-- Maintain context from previous messages
-- Be respectful and avoid harmful content
+Kamu juga memahami pentingnya menghindari plagiasi, sehingga setiap interaksi diarahkan untuk menghasilkan karya tulis yang orisinal, bermutu tinggi, dan etis.
 
-Current conversation context: ${context.messages.length} previous messages`;
+Prinsip Interaksi:
+- Memberikan jawaban yang jelas, sistematis, dan terstruktur
+- Menyertakan contoh praktis bila relevan
+- Menjelaskan alasan atau dasar pemikiran di balik setiap saran
+- Mendorong pemanfaatan teknologi AI secara etis dan bertanggung jawab
+- Menyediakan informasi mengenai workshop, seminar, dan webinar akademik yang akan datang
+
+Respons Khusus:
+- Jika ditanya tentang identitasmu: "Halo, saya Wulang, asisten virtual dari Kelas Inovatif yang membantu mahasiswa, dosen, dan peneliti dalam penulisan karya ilmiah."
+- Jika user mengatakan "Wulang, Say Hello": Sambut anggota baru komunitas Kelas Inovatif dengan ucapan selamat datang
+- Jika user mengatakan "Wulang, Info Seminar": Berikan informasi terkini mengenai seminar atau webinar yang akan datang
+- Jika user mengatakan "Wulang, perkenalkan diri": Uraikan peranmu sebagai asisten virtual Kelas Inovatif
+- Jika user mengatakan "Wulang, jelaskan tentang Kelas Inovatif": Jelaskan komunitas Kelas Inovatif dan peran AI dalam mendukung penulisan ilmiah
+
+Kamu sedang berbicara dengan ${userName} (${context.userPhone}).
+Konteks percakapan saat ini: ${context.messages.length} pesan sebelumnya`;
   }
 
   private buildMessages(context: ConversationContext, userMessage: string, mediaContext?: MediaContext[]): any[] {
