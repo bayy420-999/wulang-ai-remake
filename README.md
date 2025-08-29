@@ -1,308 +1,393 @@
-# Wulang AI - WhatsApp AI Bot
+# 🤖 Wulang AI - Advanced WhatsApp AI Bot
 
-A sophisticated WhatsApp AI bot built with TypeScript that can process text messages, PDFs, and images using GPT-4o-mini. The bot maintains conversation context and stores all interactions in a PostgreSQL database with proper conversation management.
+A sophisticated WhatsApp AI bot built with TypeScript, Node.js, and Clean Architecture principles. Powered by GPT-4o-mini, it can process text messages, analyze PDFs, and interpret images while maintaining intelligent conversation context.
 
-## 🚀 Features
+## ✨ Key Features
 
-- **Smart Conversation Management**: Detects trigger keywords and maintains conversation context with proper conversation threads
-- **Media Processing**: Handles PDF text extraction and image analysis with proper media storage and AI-generated summaries
-- **Advanced Database Architecture**: Stores all data in PostgreSQL with Prisma ORM using a sophisticated schema:
-  - **User Management**: Tracks users by phone number with conversation history
-  - **Conversation Threads**: Organizes messages into conversation threads for better context management
-  - **Message Storage**: Stores messages with role-based system (USER, BOT, SYSTEM) and optional media attachments
-  - **Media Management**: Stores media files with AI-generated summaries and proper file type classification
-- **Context Awareness**: Maintains conversation history for intelligent responses across conversation threads
-- **Content Moderation**: Basic content filtering for inappropriate messages
-- **Graceful Shutdown**: Handles process signals for clean shutdowns
-- **Automatic Maintenance**: Periodic cleanup of old conversations and temporary files
-- **Comprehensive Logging**: Detailed logging with Winston
+### 🧠 **Intelligent Conversation Management**
+- **Context-Aware Responses**: Maintains conversation history with sliding window (last 10 messages)
+- **Smart Trigger Detection**: Responds to "wulang" keyword for natural interaction
+- **Conversation Threading**: Organizes messages into conversation threads for better context
+- **Duplicate Prevention**: Prevents processing duplicate messages to save AI context
 
-## 📋 Requirements
+### 📱 **Media Processing Capabilities**
+- **PDF Analysis**: Extract and analyze text content from PDF documents
+- **Image Recognition**: Analyze images and provide detailed descriptions
+- **Media Storage**: Store media files with AI-generated summaries
+- **Multi-Modal Context**: Combine text and media for comprehensive responses
 
-- Node.js 18+ 
-- PostgreSQL database
-- OpenAI API key
-- WhatsApp account for bot authentication
+### 🏗️ **Robust Architecture**
+- **Clean Architecture**: Separation of concerns with Domain, Application, Infrastructure, and Presentation layers
+- **Dependency Injection**: Modular service container for easy testing and maintenance
+- **TypeScript**: Full type safety and modern JavaScript features
+- **Prisma ORM**: Type-safe database operations with PostgreSQL
 
-## 🛠️ Installation
+### 🔧 **Production Ready**
+- **Comprehensive Logging**: Winston-based logging with multiple levels
+- **Error Handling**: Graceful error handling with user-friendly messages
+- **Automatic Maintenance**: Scheduled cleanup of old conversations and files
+- **Graceful Shutdown**: Proper process signal handling
 
-1. **Clone the repository**
-   ```bash
-   git clone <your-repo-url>
-   cd wulang-ai-remake
-   ```
+## 📋 Prerequisites
 
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
+- **Node.js** 18+ 
+- **PostgreSQL** 12+ database
+- **OpenAI API** key (GPT-4o-mini access)
+- **WhatsApp** account for bot authentication
+- **Git** for version control
 
-3. **Setup environment variables**
-   ```bash
-   cp .env.example .env
-   ```
-   
-   Edit `.env` with your configuration:
-   ```env
-   # Database
-   DATABASE_URL="postgresql://username:password@localhost:5432/wulang_ai_db"
-   
-   # OpenAI API
-   OPENAI_API_KEY="your_openai_api_key_here"
-   
-   # Bot Configuration
-   BOT_NAME="Wulang AI"
-   TRIGGER_KEYWORD="!wulang"
-   RESET_KEYWORD="!reset"
-   MAX_CONTEXT_MESSAGES=10
-   
-   # WhatsApp Session
-   SESSION_NAME="wulang-ai-session"
-   
-   # Logging
-   LOG_LEVEL="info"
-   ```
+## 🚀 Quick Start
 
-4. **Setup PostgreSQL database**
-   Create a new PostgreSQL database for the bot.
-
-5. **Generate Prisma client and push schema**
-   ```bash
-   npm run db:generate
-   npm run db:push
-   ```
-
-6. **Build the project**
-   ```bash
-   npm run build
-   ```
-
-## 🚀 Usage
-
-### Development Mode
+### 1. **Clone and Setup**
 ```bash
-npm run dev
+git clone https://github.com/bayy420-999/wulang-ai-remake.git
+cd wulang-ai-remake
+npm install
 ```
 
-### Production Mode
-```bash
-npm run build
-npm start
+### 2. **Environment Configuration**
+Create `.env` file:
+```env
+# Database Configuration
+DATABASE_URL="postgresql://username:password@localhost:5432/wulang_ai_db"
+
+# OpenAI Configuration
+OPENAI_API_KEY="your_openai_api_key_here"
+OPENAI_MODEL="gpt-4o-mini"
+TEMPERATURE="0.7"
+
+# Bot Configuration
+BOT_NAME="Wulang AI"
+RESET_KEYWORD="!reset"
+MAX_CONTEXT_MESSAGES="10"
+SESSION_NAME="wulang-ai-session"
+
+# Logging
+LOG_LEVEL="info"
 ```
 
-### Database Management
+### 3. **Database Setup**
 ```bash
 # Generate Prisma client
 npm run db:generate
 
 # Push schema to database
 npm run db:push
-
-# Create and run migrations
-npm run db:migrate
-
-# Open Prisma Studio
-npm run db:studio
 ```
 
-## 💬 Bot Commands
+### 4. **Start the Bot**
+```bash
+# Development mode
+npm run dev
 
-- **`!wulang [message]`** - Start or continue a conversation with the AI
-- **`!reset`** - Reset conversation history and start fresh
+# Production mode
+npm run build
+npm start
+```
 
-## 📱 How It Works
+## 💬 How to Use
 
-1. **First Time Users**: Send a message containing `!wulang` to start a conversation
-2. **Existing Users**: Once you have conversation history, you can send messages without the trigger keyword
-3. **Media Support**: Send PDFs or images along with your messages for AI analysis
-4. **Context Maintenance**: The bot remembers your last 10 messages for context-aware responses
-5. **Conversation Management**: Each user can have multiple conversation threads
+### **Basic Interaction**
+1. **Start Conversation**: Send any message containing "wulang"
+2. **Continue Chat**: The bot remembers your conversation context
+3. **Reset Chat**: Send "!reset" to start fresh
 
-## 🏗️ Architecture
+### **Media Support**
+- **Send Images**: Upload images for AI analysis
+- **Send PDFs**: Upload PDFs for text extraction and analysis
+- **Ask Questions**: Ask specific questions about your media
 
+### **Example Conversations**
+```
+You: "wulang, berapa 1 + 1?"
+Bot: "1 + 1 sama dengan 2. Ada yang ingin kamu tanyakan lagi?"
+
+You: "lalu successor dari hasil penjumlahan tadi?"
+Bot: "Succesor dari 2 adalah 3. Jadi, jika ada hal lain yang ingin kamu ketahui, silakan tanya!"
+```
+
+## 🏗️ Architecture Overview
+
+### **Clean Architecture Layers**
+
+```
+┌─────────────────────────────────────┐
+│           Presentation              │
+│  ┌─────────────────────────────┐   │
+│  │     WhatsAppBot             │   │ ← WhatsApp integration
+│  │     MessageHandler          │   │ ← Message processing
+│  │     MaintenanceService      │   │ ← Scheduled tasks
+│  └─────────────────────────────┘   │
+├─────────────────────────────────────┤
+│           Application              │
+│  ┌─────────────────────────────┐   │
+│  │  ProcessMessageUseCase      │   │ ← Business logic
+│  │  ResetConversationUseCase   │   │ ← Conversation management
+│  │  ConversationManager        │   │ ← State management
+│  └─────────────────────────────┘   │
+├─────────────────────────────────────┤
+│             Domain                 │
+│  ┌─────────────────────────────┐   │
+│  │  User, Message,             │   │ ← Core entities
+│  │  Conversation, Media        │   │ ← Business rules
+│  │  Interfaces & Errors        │   │ ← Contracts
+│  └─────────────────────────────┘   │
+├─────────────────────────────────────┤
+│         Infrastructure             │
+│  ┌─────────────────────────────┐   │
+│  │  Prisma Repositories        │   │ ← Data access
+│  │  OpenAIService              │   │ ← External APIs
+│  │  MediaProcessingService     │   │ ← File processing
+│  │  WhatsAppClient             │   │ ← WhatsApp API
+│  └─────────────────────────────┘   │
+└─────────────────────────────────────┘
+```
+
+### **Project Structure**
 ```
 src/
-├── config/          # Configuration and environment handling
-├── lib/             # Utilities (database connection, logging)
-├── services/        # Core services
-│   ├── ai.ts        # AI service with Vercel AI SDK
-│   ├── database.ts  # Database operations with conversation management
-│   ├── media.ts     # PDF and image processing
-│   └── whatsappBot.ts  # Main bot logic and WhatsApp integration
-├── prisma/          # Database schema
-└── index.ts         # Application entry point
+├── application/           # Application layer
+│   ├── dto/              # Data Transfer Objects
+│   ├── services/         # Application services
+│   └── use-cases/        # Business logic
+├── config/               # Configuration
+│   └── env.ts           # Environment variables
+├── domain/               # Domain layer
+│   ├── entities/         # Core entities
+│   ├── errors/           # Domain errors
+│   └── interfaces/       # Contracts
+├── infrastructure/       # Infrastructure layer
+│   ├── cache/           # Caching services
+│   ├── database/        # Database repositories
+│   └── external/        # External services
+├── lib/                  # Shared utilities
+│   ├── db.ts            # Database connection
+│   └── logger.ts        # Logging setup
+├── presentation/         # Presentation layer
+│   ├── handlers/        # Message handlers
+│   └── services/        # Presentation services
+├── shared/              # Shared configuration
+│   └── config/          # DI container
+└── index.ts             # Application entry point
 ```
 
-### Clean Architecture Layers
+## 🗄️ Database Schema
 
+### **Core Entities**
+
+#### **User**
+```sql
+- id: String (CUID, Primary Key)
+- phoneNumber: String (Unique)
+- name: String? (Optional)
+- createdAt: DateTime
 ```
-┌─────────────────┐
-│   Presentation  │ ← WhatsAppBot (WhatsApp interface)
-├─────────────────┤
-│   Application   │ ← Message processing, media handling, AI integration
-├─────────────────┤  
-│   Domain        │ ← User, Message, Conversation entities
-├─────────────────┤
-│   Infrastructure│ ← DatabaseService, AIService, MediaService
-└─────────────────┘
+
+#### **Conversation**
+```sql
+- id: String (CUID, Primary Key)
+- userId: String (Foreign Key)
+- createdAt: DateTime
+- updatedAt: DateTime
+```
+
+#### **Message**
+```sql
+- id: String (CUID, Primary Key)
+- role: Enum (USER, ASSISTANT, SYSTEM)
+- content: String? (Optional)
+- mediaId: String? (Foreign Key)
+- conversationId: String (Foreign Key)
+- createdAt: DateTime
+```
+
+#### **Media**
+```sql
+- id: String (CUID, Primary Key)
+- url: String
+- type: String
+- summary: String? (AI-generated)
+- userId: String (Foreign Key)
+- createdAt: DateTime
 ```
 
 ## 🔧 Configuration Options
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `DATABASE_URL` | PostgreSQL connection string | Required |
-| `OPENAI_API_KEY` | OpenAI API key for GPT-4o-mini | Required |
-| `BOT_NAME` | Display name for the bot | "Wulang AI" |
-| `TRIGGER_KEYWORD` | Keyword to activate the bot | "!wulang" |
-| `RESET_KEYWORD` | Keyword to reset conversation | "!reset" |
-| `MAX_CONTEXT_MESSAGES` | Number of messages to keep in context | 10 |
-| `SESSION_NAME` | WhatsApp session identifier | "wulang-ai-session" |
-| `LOG_LEVEL` | Logging level (error/warn/info/debug) | "info" |
+| Variable | Description | Default | Required |
+|----------|-------------|---------|----------|
+| `DATABASE_URL` | PostgreSQL connection string | - | ✅ |
+| `OPENAI_API_KEY` | OpenAI API key | - | ✅ |
+| `OPENAI_MODEL` | AI model to use | `gpt-4o-mini` | ❌ |
+| `TEMPERATURE` | AI response creativity (0-2) | `0.7` | ❌ |
+| `BOT_NAME` | Bot display name | `Wulang AI` | ❌ |
+| `RESET_KEYWORD` | Reset conversation command | `!reset` | ❌ |
+| `MAX_CONTEXT_MESSAGES` | Context window size | `10` | ❌ |
+| `SESSION_NAME` | WhatsApp session ID | `wulang-ai-session` | ❌ |
+| `LOG_LEVEL` | Logging level | `info` | ❌ |
 
-## 📊 Database Schema (Updated)
+## 🛠️ Development Commands
 
-The application uses a sophisticated database schema designed for optimal conversation management and media handling:
+```bash
+# Development
+npm run dev              # Start in development mode
+npm run build           # Build for production
+npm start               # Start production server
 
-### User Model
-- `id` - Unique identifier (CUID)
-- `phoneNumber` - WhatsApp phone number (unique)
-- `name` - User's display name (optional)
-- `conversations` - One-to-many relationship with conversations
-- `media` - One-to-many relationship with uploaded media
-- `createdAt` - Account creation timestamp
+# Database
+npm run db:generate     # Generate Prisma client
+npm run db:push         # Push schema to database
+npm run db:migrate      # Create and run migrations
+npm run db:studio       # Open Prisma Studio
 
-### Conversation Model
-- `id` - Unique identifier (CUID)
-- `userId` - Foreign key to user
-- `messages` - One-to-many relationship with messages
-- `createdAt` - Conversation creation timestamp
-- `updatedAt` - Last activity timestamp (auto-updated)
-
-### Message Model
-- `id` - Unique identifier (CUID)
-- `role` - Message role enum (USER, BOT, SYSTEM)
-- `content` - Message text content (optional for media messages)
-- `mediaId` - Foreign key to media (optional)
-- `conversationId` - Foreign key to conversation
-- `media` - One-to-one relationship with media
-- `conversation` - Many-to-one relationship with conversation
-- `createdAt` - Message timestamp
-
-### Media Model
-- `id` - Unique identifier (CUID)
-- `url` - File storage location (S3/Cloudinary/local)
-- `type` - Media type classification (image, pdf, etc.)
-- `summary` - AI-generated summary/parsed text (optional)
-- `userId` - Foreign key to user
-- `messages` - One-to-many relationship with messages using this media
-- `createdAt` - Upload timestamp
-
-### Key Features of the New Schema:
-- **Conversation Threading**: Messages are organized into conversation threads for better context management
-- **Media Integration**: Media files are properly linked to messages and users
-- **Role-Based Messaging**: Clear distinction between user, bot, and system messages
-- **Automatic Timestamps**: Created and updated timestamps for tracking conversation activity
-- **Cascading Deletes**: Proper cleanup when conversations or users are deleted
-
-## 🔒 Security Features
-
-- Content moderation for inappropriate messages
-- Phone number validation and formatting
-- Secure environment variable handling
-- Database connection security
-- Graceful error handling
-
-## 🧪 Development
-
-### Project Structure
-```
-├── src/
-│   ├── config/      # Configuration files
-│   ├── lib/         # Shared utilities
-│   ├── services/    # Business logic services
-│   └── index.ts     # Main application
-├── prisma/          # Database schema and migrations
-├── temp/            # Temporary files (auto-created)
-└── logs/            # Log files (production)
+# Maintenance
+npm run maintenance     # Run manual maintenance
 ```
 
-### Key Services
+## 🐛 Troubleshooting
 
-1. **WhatsAppBot**: Main bot class handling WhatsApp integration, message processing, and bot lifecycle
-2. **AIService**: Manages OpenAI API interactions and conversation generation
-3. **DatabaseService**: Handles all database operations with Prisma and conversation management
-4. **MediaService**: Processes PDFs and images for AI context
+### **Common Issues**
 
-## 📝 Logging
+#### **1. Database Connection Failed**
+```bash
+Error: Failed to connect to database
+```
+**Solution:**
+- Verify `DATABASE_URL` in `.env`
+- Ensure PostgreSQL is running
+- Check network connectivity
 
-The bot uses Winston for comprehensive logging:
-- Console output for development
-- File logging for production
-- Structured JSON logs
-- Configurable log levels
+#### **2. OpenAI API Error**
+```bash
+Error: OpenAI API key invalid
+```
+**Solution:**
+- Verify `OPENAI_API_KEY` in `.env`
+- Check API key permissions
+- Ensure sufficient credits
 
-## 🔄 Maintenance
+#### **3. WhatsApp Authentication Failed**
+```bash
+Error: WhatsApp QR code expired
+```
+**Solution:**
+- Delete `.wwebjs_auth` folder
+- Restart the bot
+- Scan QR code again
 
-The bot automatically performs maintenance tasks:
-- Cleanup of old conversations (90+ days)
-- Removal of temporary files
-- Database optimization
-- Runs every 24 hours or manually via API
+#### **4. Context Issues**
+```bash
+Problem: Duplicate messages in context
+```
+**Solution:**
+- Check if duplicate prevention is working
+- Verify message ID tracking
+- Restart the application
 
-## 🚨 Error Handling
+### **Debug Mode**
+```bash
+# Set log level to debug
+LOG_LEVEL=debug npm run dev
+```
 
-- Graceful degradation for API failures
-- Automatic retry mechanisms
-- Comprehensive error logging
-- User-friendly error messages
-- Process signal handling for clean shutdowns
+## 📊 Performance Optimization
 
-## 📚 Dependencies
+### **Context Management**
+- **Sliding Window**: Only keeps last 10 messages in context
+- **Duplicate Prevention**: Avoids processing same message twice
+- **Memory Management**: Cleans up old message IDs
 
-### Core Dependencies
-- `whatsapp-web.js` - WhatsApp Web API client
-- `@prisma/client` - Database ORM
-- `ai` - Vercel AI SDK
-- `openai` - OpenAI API client
-- `winston` - Logging library
+### **Database Optimization**
+- **Indexed Queries**: Optimized for conversation lookups
+- **Connection Pooling**: Efficient database connections
+- **Cascading Deletes**: Proper cleanup of related data
 
-### Media Processing
-- `pdf-parse` - PDF text extraction
-- `jimp` - Image processing
+### **Media Processing**
+- **Temporary Storage**: Files stored temporarily and cleaned up
+- **Size Limits**: 10MB file size limit
+- **Format Support**: PDF and common image formats
 
-### Development
-- `typescript` - Type checking
-- `tsx` - TypeScript execution
-- `prisma` - Database management
+## 🔒 Security Considerations
+
+- **Environment Variables**: Sensitive data stored in `.env`
+- **Input Validation**: All inputs validated and sanitized
+- **Error Handling**: No sensitive data in error messages
+- **Content Moderation**: Basic inappropriate content filtering
+
+## 📈 Monitoring & Logging
+
+### **Log Levels**
+- `error`: Critical errors and failures
+- `warn`: Warning messages
+- `info`: General information
+- `debug`: Detailed debugging information
+
+### **Log Files**
+- **Development**: Console output only
+- **Production**: File-based logging with rotation
+
+### **Key Metrics**
+- Message processing time
+- AI response generation time
+- Database query performance
+- Error rates and types
 
 ## 🤝 Contributing
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
+1. **Fork** the repository
+2. **Create** a feature branch (`git checkout -b feature/amazing-feature`)
+3. **Commit** your changes (`git commit -m 'Add amazing feature'`)
+4. **Push** to the branch (`git push origin feature/amazing-feature`)
+5. **Open** a Pull Request
+
+### **Development Guidelines**
+- Follow TypeScript best practices
+- Maintain clean architecture principles
+- Add comprehensive error handling
+- Include proper logging
+- Write clear commit messages
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## 🆘 Support
 
-If you encounter any issues:
+### **Getting Help**
+1. Check the [troubleshooting](#troubleshooting) section
+2. Review the logs for error messages
+3. Verify your configuration
+4. Open an issue on GitHub
 
-1. Check the logs for error messages
-2. Verify your environment configuration
-3. Ensure your PostgreSQL database is accessible
-4. Confirm your OpenAI API key is valid
-5. Check WhatsApp Web connection status
+### **Useful Resources**
+- [Prisma Documentation](https://www.prisma.io/docs)
+- [WhatsApp Web.js Documentation](https://docs.wwebjs.dev/)
+- [OpenAI API Documentation](https://platform.openai.com/docs)
+- [TypeScript Handbook](https://www.typescriptlang.org/docs/)
 
-## ⚠️ Important Notes
+## 🚀 Deployment
 
-- The bot requires an active WhatsApp Web session
-- OpenAI API usage will incur costs based on usage
-- PostgreSQL database should be regularly backed up
-- Media files are temporarily stored and cleaned up automatically
-- Bot responses are limited to 500 tokens for WhatsApp compatibility
-- Conversations are managed as separate threads for better context management
+### **Production Checklist**
+- [ ] Set up PostgreSQL database
+- [ ] Configure environment variables
+- [ ] Set up logging and monitoring
+- [ ] Configure backup strategy
+- [ ] Set up SSL/TLS certificates
+- [ ] Configure process manager (PM2)
+- [ ] Set up reverse proxy (Nginx)
+
+### **Docker Deployment**
+```dockerfile
+# Example Dockerfile
+FROM node:18-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --only=production
+COPY . .
+RUN npm run build
+EXPOSE 3000
+CMD ["npm", "start"]
+```
+
+---
+
+**Made with ❤️ using TypeScript, Node.js, and Clean Architecture principles**
