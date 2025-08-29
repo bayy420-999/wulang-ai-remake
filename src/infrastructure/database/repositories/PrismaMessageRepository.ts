@@ -56,12 +56,21 @@ export class PrismaMessageRepository implements IMessageRepository {
 
   async findByConversationId(conversationId: string, limit: number = 10): Promise<Message[]> {
     try {
+      // First, get the total count to calculate offset
+      const totalCount = await this.prisma.message.count({
+        where: { conversationId }
+      });
+
+      // Calculate offset to get the last N messages
+      const offset = Math.max(0, totalCount - limit);
+
       const messages = await this.prisma.message.findMany({
         where: { conversationId },
         orderBy: [
           { createdAt: 'asc' },
           { id: 'asc' } // Secondary sort for consistent ordering
         ],
+        skip: offset,  // ✅ Skip older messages to get the last N
         take: limit,
         include: {
           media: true,
@@ -79,7 +88,7 @@ export class PrismaMessageRepository implements IMessageRepository {
         }
       });
 
-      // Messages are already in chronological order (oldest first)
+      // Messages are now in chronological order (oldest first) but only the last N
       return messages.map(message => ({
         id: message.id,
         role: this.mapPrismaRoleToMessageRole(message.role),

@@ -29,6 +29,8 @@ export interface MediaMessage {
 }
 
 export class MessageHandler {
+  private processedMessageIds: Set<string> = new Set();
+
   constructor(
     private processMessageUseCase: ProcessMessageUseCase,
     private resetConversationUseCase: ResetConversationUseCase,
@@ -41,6 +43,17 @@ export class MessageHandler {
       if (message.fromMe || message.from.includes('@g.us')) {
         return { shouldRespond: false };
       }
+
+      // Prevent duplicate processing by checking message ID
+      const messageId = message.id._serialized || message.id;
+      if (this.processedMessageIds.has(messageId)) {
+        logDebug(`Skipping duplicate message: ${messageId}`, 'MessageHandler');
+        return { shouldRespond: false };
+      }
+      this.processedMessageIds.add(messageId);
+
+      // Clean up old message IDs periodically
+      this.cleanupOldMessageIds();
 
       logDebug(`Processing message from ${message.from}: ${message.body}`, 'MessageHandler');
 
@@ -196,6 +209,16 @@ export class MessageHandler {
       return 'pdf';
     } else {
       return 'document';
+    }
+  }
+
+  // Clean up old message IDs to prevent memory leaks
+  private cleanupOldMessageIds(): void {
+    // Keep only the last 1000 message IDs to prevent memory leaks
+    if (this.processedMessageIds.size > 1000) {
+      const idsArray = Array.from(this.processedMessageIds);
+      this.processedMessageIds = new Set(idsArray.slice(-500));
+      logDebug(`Cleaned up message ID cache, kept last 500 IDs`, 'MessageHandler');
     }
   }
 }
