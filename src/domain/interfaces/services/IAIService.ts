@@ -19,7 +19,7 @@ export interface MediaContext {
   content: string;
   filename?: string;
   mimeType?: string;
-  data?: string; // base64 data for images
+  data?: string | Buffer; // base64 data for images
 }
 
 export interface ModerationResult {
@@ -33,7 +33,6 @@ export interface IAIService {
   generateResponse(userMessage: string, context: ConversationContext, mediaContext?: MediaContext[]): Promise<string>;
   generateWelcomeMessage(userName?: string): Promise<string>;
   generateResetMessage(): Promise<string>;
-  analyzeMedia(mediaContext: MediaContext): Promise<string>;
   analyzeMediaWithCaption(mediaContext: MediaContext, userCaption: string): Promise<string>;
   moderateContent(content: string): Promise<ModerationResult>;
 }

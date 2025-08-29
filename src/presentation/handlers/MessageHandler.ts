@@ -6,6 +6,7 @@ import { ConversationManager } from '../../application/services/ConversationMana
 import { MessageRole } from '../../domain/entities/Message';
 import { env } from '../../config/env';
 import { logError, logInfo, logDebug } from '../../lib/logger';
+import { ResponseFormatter } from '../../infrastructure/utils/ResponseFormatter';
 
 export interface WhatsAppMessage {
   id: string;
@@ -30,12 +31,15 @@ export interface MediaMessage {
 
 export class MessageHandler {
   private processedMessageIds: Set<string> = new Set();
+  private responseFormatter: ResponseFormatter;
 
   constructor(
     private processMessageUseCase: ProcessMessageUseCase,
     private resetConversationUseCase: ResetConversationUseCase,
     private conversationManager: ConversationManager
-  ) {}
+  ) {
+    this.responseFormatter = new ResponseFormatter();
+  }
 
   async handleMessage(message: Message): Promise<{ shouldRespond: boolean; response?: string }> {
     try {
@@ -45,7 +49,7 @@ export class MessageHandler {
       }
 
       // Prevent duplicate processing by checking message ID
-      const messageId = message.id._serialized || message.id;
+      const messageId = typeof message.id === 'string' ? message.id : message.id._serialized || String(message.id);
       if (this.processedMessageIds.has(messageId)) {
         logDebug(`Skipping duplicate message: ${messageId}`, 'MessageHandler');
         return { shouldRespond: false };
@@ -72,7 +76,7 @@ export class MessageHandler {
       
       if (!hasWulangKeyword) {
         logDebug(`Ignoring message without "wulang" keyword from ${phoneNumber}`, 'MessageHandler');
-        return { shouldRespond: true, response: 'Halo! Ada yang bisa saya bantu? tolong panggil saya dengan menyebut "wulang" dalam pesan' };
+        return { shouldRespond: true, response: this.responseFormatter.formatForWhatsApp('Halo! Ada yang bisa saya bantu? tolong panggil saya dengan menyebut "wulang" dalam pesan') };
       }
 
       // Use message content as-is (no cleaning)
@@ -133,7 +137,7 @@ export class MessageHandler {
           logError('Failed to download media', error as Error, 'MessageHandler');
           return { 
             shouldRespond: true, 
-            response: '❌ Maaf, saya tidak bisa memproses file media Anda. Silakan coba lagi atau kirim dalam format yang berbeda.'
+            response: this.responseFormatter.formatError('Maaf, saya tidak bisa memproses file media Anda. Silakan coba lagi atau kirim dalam format yang berbeda.')
           };
         }
       }
@@ -152,7 +156,7 @@ export class MessageHandler {
         
         return {
           shouldRespond: true,
-          response: botResponse
+          response: this.responseFormatter.formatForWhatsApp(botResponse)
         };
       }
       
@@ -182,7 +186,7 @@ export class MessageHandler {
       logError('Error handling message', error as Error, 'MessageHandler');
       return { 
         shouldRespond: true, 
-        response: '❌ Maaf, saya mengalami kesalahan saat memproses pesan Anda. Silakan coba lagi nanti.'
+        response: this.responseFormatter.formatError('Maaf, saya mengalami kesalahan saat memproses pesan Anda. Silakan coba lagi nanti.')
       };
     }
   }

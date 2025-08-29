@@ -15,6 +15,7 @@ Bot AI WhatsApp yang canggih dibangun dengan TypeScript, Node.js, dan prinsip Cl
 - **Pengenalan Gambar**: Menganalisis gambar dan memberikan deskripsi detail
 - **Penyimpanan Media**: Menyimpan file media dengan ringkasan yang dibuat AI
 - **Konteks Multi-Modal**: Menggabungkan teks dan media untuk respons yang komprehensif
+- **Respons WhatsApp yang Dioptimalkan**: Konversi otomatis markdown ke teks biasa untuk tampilan WhatsApp yang optimal
 
 ### 🏗️ **Arsitektur yang Kuat**
 - **Clean Architecture**: Pemisahan tanggung jawab dengan lapisan Domain, Application, Infrastructure, dan Presentation
@@ -27,6 +28,7 @@ Bot AI WhatsApp yang canggih dibangun dengan TypeScript, Node.js, dan prinsip Cl
 - **Penanganan Error**: Penanganan error yang graceful dengan pesan yang ramah pengguna
 - **Pemeliharaan Otomatis**: Pembersihan terjadwal untuk percakapan dan file lama
 - **Shutdown Graceful**: Penanganan sinyal proses yang tepat
+- **Formatting Respons**: Konversi pintar respons AI ke format yang kompatibel dengan WhatsApp
 
 ## 📋 Prasyarat
 
@@ -105,6 +107,40 @@ Bot: "1 + 1 sama dengan 2. Ada yang ingin kamu tanyakan lagi?"
 Anda: "lalu successor dari hasil penjumlahan tadi?"
 Bot: "Succesor dari 2 adalah 3. Jadi, jika ada hal lain yang ingin kamu ketahui, silakan tanya!"
 ```
+
+### **Formatting Respons WhatsApp**
+Bot secara otomatis mengkonversi respons markdown dari AI ke teks biasa yang ramah WhatsApp:
+
+**Respons AI (Markdown):**
+```
+# Hasil Analisis
+
+Ini adalah analisis **detail** dengan:
+- Poin 1
+- Poin 2
+
+Kunjungi [Google](https://google.com) untuk info lebih lanjut.
+```
+
+**Tampilan WhatsApp:**
+```
+Hasil Analisis
+
+Ini adalah analisis *detail* dengan:
+• Poin 1
+• Poin 2
+
+Kunjungi Google untuk info lebih lanjut.
+```
+
+**Fitur:**
+- ✅ **Teks Tebal**: `**teks**` → `*teks*` (tebal WhatsApp)
+- ✅ **Teks Miring**: `*teks*` → `_teks_` (miring WhatsApp)
+- ✅ **Coretan**: `~~teks~~` → `~teks~` (coretan WhatsApp)
+- ✅ **Blok Kode**: Dipertahankan sebagai monospace
+- ✅ **Daftar**: Dikonversi ke bullet points
+- ✅ **Link**: URL dihapus, teks dipertahankan
+- ✅ **Header**: Dikonversi ke teks biasa
 
 ## 🏗️ Ikhtisar Arsitektur
 
@@ -363,6 +399,30 @@ Proyek ini dilisensikan di bawah MIT License - lihat file [LICENSE](LICENSE) unt
 - [Dokumentasi WhatsApp Web.js](https://docs.wwebjs.dev/)
 - [Dokumentasi OpenAI API](https://platform.openai.com/docs)
 - [TypeScript Handbook](https://www.typescriptlang.org/docs/)
+
+## 🛠️ Teknologi & Dependensi
+
+### **Teknologi Inti**
+- **TypeScript**: Pengembangan JavaScript yang aman tipe
+- **Node.js**: Runtime JavaScript server-side
+- **PostgreSQL**: Database relasional
+- **Prisma**: ORM database yang aman tipe
+- **WhatsApp Web.js**: Library klien WhatsApp
+- **OpenAI AI SDK**: Integrasi GPT-4o-mini
+
+### **Library Utama**
+- **turndown**: Konversi HTML-ke-markdown untuk formatting respons
+- **winston**: Logging terstruktur
+- **pdf-parse**: Ekstraksi teks PDF
+- **jimp**: Pemrosesan gambar
+- **dotenv**: Manajemen variabel environment
+- **zod**: Validasi tipe runtime
+
+### **Alat Development**
+- **Jest**: Framework unit testing
+- **ts-jest**: Dukungan testing TypeScript
+- **ESLint**: Linting kode
+- **Prettier**: Formatting kode
 
 ## 🚀 Deployment
 

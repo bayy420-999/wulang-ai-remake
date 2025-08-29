@@ -4,10 +4,14 @@ import { IAIService, ConversationContext, MediaContext, ModerationResult } from 
 import { env } from '../../../config/env';
 import { AIServiceError } from '../../../domain/errors/BotError';
 import { logError, logInfo, logDebug, logWarn } from '../../../lib/logger';
+import { ResponseFormatter } from '../../utils/ResponseFormatter';
 
 export class OpenAIService implements IAIService {
+  private responseFormatter: ResponseFormatter;
+
   constructor() {
     // Vercel AI SDK handles configuration automatically
+    this.responseFormatter = new ResponseFormatter();
   }
 
   async generateResponse(userMessage: string, context: ConversationContext, mediaContext?: MediaContext[]): Promise<string> {
@@ -25,7 +29,8 @@ export class OpenAIService implements IAIService {
         throw new AIServiceError('No response from OpenAI');
       }
 
-      return text;
+      // Format the response for WhatsApp
+      return this.responseFormatter.formatForWhatsApp(text);
     } catch (error) {
       logError('Error generating AI response', error as Error, 'OpenAIService');
       throw new AIServiceError(`Failed to generate response: ${error}`);
@@ -54,10 +59,11 @@ export class OpenAIService implements IAIService {
         temperature: 0.7,
       });
 
-      return text || 'Selamat datang di Kelas Inovatif! Saya Wulang, asisten virtual yang siap membantu Anda dalam penulisan karya ilmiah.';
+      const response = text || 'Selamat datang di Kelas Inovatif! Saya Wulang, asisten virtual yang siap membantu Anda dalam penulisan karya ilmiah.';
+      return this.responseFormatter.formatWelcome(response);
     } catch (error) {
       logError('Error generating welcome message', error as Error, 'OpenAIService');
-      return 'Selamat datang di Kelas Inovatif! Saya Wulang, asisten virtual yang siap membantu Anda dalam penulisan karya ilmiah.';
+      return this.responseFormatter.formatWelcome('Selamat datang di Kelas Inovatif! Saya Wulang, asisten virtual yang siap membantu Anda dalam penulisan karya ilmiah.');
     }
   }
 
@@ -79,97 +85,15 @@ export class OpenAIService implements IAIService {
         temperature: 0.7,
       });
 
-      return text || '✅ Riwayat percakapan telah direset. Mari mulai sesi baru untuk membantu Anda dengan penulisan karya ilmiah!';
+      const response = text || '✅ Riwayat percakapan telah direset. Mari mulai sesi baru untuk membantu Anda dengan penulisan karya ilmiah!';
+      return this.responseFormatter.formatForWhatsApp(response);
     } catch (error) {
       logError('Error generating reset message', error as Error, 'OpenAIService');
-      return '✅ Riwayat percakapan telah direset. Mari mulai sesi baru untuk membantu Anda dengan penulisan karya ilmiah!';
+      return this.responseFormatter.formatForWhatsApp('✅ Riwayat percakapan telah direset. Mari mulai sesi baru untuk membantu Anda dengan penulisan karya ilmiah!');
     }
   }
 
-  async analyzeMedia(mediaContext: MediaContext): Promise<string> {
-    try {
-      // Create a minimal context for the system prompt
-      const context: ConversationContext = {
-        userPhone: 'User',
-        userName: 'User',
-        messages: []
-      };
 
-      if (mediaContext.type === 'image' && mediaContext.data) {
-        // For images, generate a comprehensive summary for database storage
-        const { text } = await generateText({
-          model: openai(env.OPENAI_MODEL),
-          messages: [
-            { 
-              role: 'system', 
-              content: this.buildSystemPrompt(context) + `
-
-TUGAS KHUSUS ANALISIS GAMBAR:
-Analisis gambar ini dan berikan ringkasan komprehensif dalam bahasa Indonesia yang menangkap semua detail penting. Ringkasan ini akan disimpan dalam database dan digunakan untuk referensi masa depan, jadi buatlah selengkap dan sedetail mungkin.
-
-Sertakan dalam analisis Anda:
-- Subjek dan objek utama dalam gambar
-- Warna, tekstur, dan elemen visual
-- Hubungan spasial dan komposisi
-- Teks, angka, atau simbol yang terlihat
-- Suasana, atmosfer, atau konteks
-- Detail teknis (jika relevan)
-- Fitur yang menonjol atau tidak biasa
-- Relevansi akademik (jika berlaku)
-
-Buat ringkasan yang komprehensif sehingga seseorang dapat mengajukan pertanyaan lanjutan tentang detail spesifik dalam gambar dan Anda memiliki informasi untuk menjawabnya.` 
-            },
-            { 
-              role: 'user', 
-              content: [
-                { type: 'text', text: 'Silakan berikan analisis komprehensif gambar ini dalam bahasa Indonesia. Sertakan semua detail penting yang dapat direferensikan dalam percakapan masa depan.' },
-                { type: 'image', image: mediaContext.data }
-              ]
-            }
-          ],
-          temperature: 0.3,
-        });
-
-        return text || 'Maaf, saya tidak bisa menganalisis gambar ini.';
-      } else if (mediaContext.type === 'pdf') {
-        // For PDFs, generate a comprehensive summary
-        const { text } = await generateText({
-          model: openai(env.OPENAI_MODEL),
-        messages: [
-            { 
-              role: 'system', 
-              content: this.buildSystemPrompt(context) + `
-
-TUGAS KHUSUS ANALISIS PDF:
-Analisis konten PDF ini dan berikan ringkasan komprehensif dalam bahasa Indonesia yang menangkap semua informasi penting. Ringkasan ini akan disimpan dalam database dan digunakan untuk referensi masa depan, jadi buatlah selengkap dan sedetail mungkin.
-
-Sertakan dalam analisis Anda:
-- Topik dan tema utama
-- Poin-poin kunci dan argumen
-- Data, statistik, atau fakta penting
-- Struktur dan organisasi
-- Kesimpulan atau rekomendasi
-- Kutipan atau referensi yang menonjol
-- Istilah teknis atau konsep
-- Gaya penulisan akademik dan metodologi (jika berlaku)
-- Implikasi penelitian dan aplikasi
-
-Buat ringkasan yang komprehensif sehingga seseorang dapat mengajukan pertanyaan lanjutan tentang konten spesifik dan Anda memiliki informasi untuk menjawabnya.` 
-            },
-            { role: 'user', content: `Analisis konten PDF ini dan berikan ringkasan komprehensif dalam bahasa Indonesia. Sertakan semua informasi penting yang dapat direferensikan dalam percakapan masa depan. Konten: ${mediaContext.content}` }
-          ],
-        temperature: 0.3,
-      });
-
-        return text || 'Maaf, saya tidak bisa menganalisis PDF ini.';
-      }
-
-      return 'Maaf, saya tidak bisa menganalisis media ini.';
-    } catch (error) {
-      logError('Error analyzing media', error as Error, 'OpenAIService');
-      throw new AIServiceError(`Failed to analyze media: ${error}`);
-    }
-  }
 
   async analyzeMediaWithCaption(mediaContext: MediaContext, userCaption: string): Promise<string> {
     try {
@@ -180,12 +104,15 @@ Buat ringkasan yang komprehensif sehingga seseorang dapat mengajukan pertanyaan 
         messages: []
       };
 
+      // Build enhanced system prompt with media-specific instructions
+      const mediaSystemPrompt = this.buildSystemPrompt(context) + this.buildMediaAnalysisInstructions(mediaContext.type);
+
       if (mediaContext.type === 'image' && mediaContext.data) {
         // For images with caption, send both image and text
         const { text } = await generateText({
           model: openai(env.OPENAI_MODEL),
           messages: [
-            { role: 'system', content: this.buildSystemPrompt(context) },
+            { role: 'system', content: mediaSystemPrompt },
             { 
               role: 'user', 
               content: [
@@ -197,22 +124,53 @@ Buat ringkasan yang komprehensif sehingga seseorang dapat mengajukan pertanyaan 
           temperature: 0.3,
         });
 
-        return text || 'Maaf, saya tidak bisa menganalisis gambar ini berdasarkan pertanyaan Anda.';
-      } else if (mediaContext.type === 'pdf') {
-        // For PDFs with caption, use text content
+        const response = text || 'Maaf, saya tidak bisa menganalisis gambar ini berdasarkan pertanyaan Anda.';
+        return this.responseFormatter.formatMediaAnalysis(response);
+      } else if (mediaContext.type === 'pdf' && mediaContext.data) {
+        // For PDFs with caption, use the file data as per AI SDK specification
+        logInfo(`📄 Processing PDF: ${mediaContext.filename || 'unnamed'}`, 'OpenAIService');
+        logInfo(`📄 PDF data type: ${typeof mediaContext.data}`, 'OpenAIService');
+        logInfo(`📄 PDF data is Buffer: ${Buffer.isBuffer(mediaContext.data)}`, 'OpenAIService');
+        logInfo(`📄 PDF data length: ${Buffer.isBuffer(mediaContext.data) ? mediaContext.data.length : (mediaContext.data as string).length}`, 'OpenAIService');
+        logInfo(`📄 PDF data sample: ${Buffer.isBuffer(mediaContext.data) ? mediaContext.data.toString('hex').substring(0, 20) : (mediaContext.data as string).substring(0, 20)}`, 'OpenAIService');
+        
+        // Ensure we have a proper Buffer
+        const pdfBuffer = Buffer.isBuffer(mediaContext.data) 
+          ? mediaContext.data 
+          : Buffer.from(mediaContext.data as string, 'base64');
+        
+        logInfo(`📄 Final PDF buffer length: ${pdfBuffer.length}`, 'OpenAIService');
+        logInfo(`📄 PDF buffer starts with: ${pdfBuffer.toString('hex').substring(0, 20)}...`, 'OpenAIService');
+        
         const { text } = await generateText({
           model: openai(env.OPENAI_MODEL),
         messages: [
-            { role: 'system', content: this.buildSystemPrompt(context) },
-            { role: 'user', content: `Analisis konten PDF ini berdasarkan pertanyaan pengguna: "${userCaption}". Berikan jawaban detail dalam bahasa Indonesia. Konten PDF: ${mediaContext.content}` }
+            { role: 'system', content: mediaSystemPrompt },
+            { 
+              role: 'user', 
+              content: [
+                {
+                  type: 'text',
+                  text: `Pertanyaan: ${userCaption}\n\nSilakan analisis dokumen PDF ini berdasarkan pertanyaan di atas.`,
+                },
+                {
+                  type: 'file',
+                  data: pdfBuffer,
+                  mediaType: 'application/pdf',
+                  filename: mediaContext.filename || 'document.pdf',
+                },
+              ]
+            }
         ],
         temperature: 0.3,
       });
 
-        return text || 'Maaf, saya tidak bisa menganalisis PDF ini berdasarkan pertanyaan Anda.';
+        logInfo(`📄 PDF analysis completed successfully`, 'OpenAIService');
+        const response = text || 'Maaf, saya tidak bisa menganalisis PDF ini berdasarkan pertanyaan Anda.';
+        return this.responseFormatter.formatMediaAnalysis(response);
       }
 
-      return 'Maaf, saya tidak bisa menganalisis media ini berdasarkan pertanyaan Anda.';
+      return this.responseFormatter.formatMediaAnalysis('Maaf, saya tidak bisa menganalisis media ini berdasarkan pertanyaan Anda.');
     } catch (error) {
       logError('Error analyzing media with caption', error as Error, 'OpenAIService');
       throw new AIServiceError(`Failed to analyze media with caption: ${error}`);
@@ -274,6 +232,56 @@ Respons Khusus:
 
 Kamu sedang berbicara dengan ${userName} (${context.userPhone}).
 Konteks percakapan saat ini: ${context.messages.length} pesan sebelumnya`;
+  }
+
+  private buildMediaAnalysisInstructions(mediaType: string): string {
+    if (mediaType === 'image') {
+      return `
+
+TUGAS KHUSUS ANALISIS GAMBAR:
+Ketika menganalisis gambar, berikan jawaban yang komprehensif dan detail dalam bahasa Indonesia. Analisis Anda harus mencakup:
+
+- Subjek dan objek utama dalam gambar
+- Warna, tekstur, dan elemen visual yang menonjol
+- Hubungan spasial dan komposisi gambar
+- Teks, angka, atau simbol yang terlihat
+- Suasana, atmosfer, atau konteks yang terasa
+- Detail teknis (jika relevan)
+- Fitur yang menonjol atau tidak biasa
+- Relevansi akademik (jika berlaku)
+
+Jawablah pertanyaan pengguna dengan merujuk pada detail spesifik dalam gambar dan berikan analisis yang dapat membantu dalam konteks penulisan akademik.`;
+    } else if (mediaType === 'pdf') {
+      return `
+
+TUGAS KHUSUS ANALISIS PDF:
+Ketika menganalisis dokumen PDF, berikan jawaban yang komprehensif dan detail dalam bahasa Indonesia. Analisis Anda harus mencakup:
+
+- Topik dan tema utama dokumen
+- Poin-poin kunci dan argumen yang disampaikan
+- Data, statistik, atau fakta penting yang disebutkan
+- Struktur dan organisasi dokumen
+- Kesimpulan atau rekomendasi yang diberikan
+- Kutipan atau referensi yang menonjol
+- Istilah teknis atau konsep yang dijelaskan
+- Gaya penulisan akademik dan metodologi (jika berlaku)
+- Implikasi penelitian dan aplikasi praktis
+
+Jawablah pertanyaan pengguna dengan merujuk pada konten spesifik dalam PDF dan berikan analisis yang dapat membantu dalam konteks penulisan akademik.`;
+    } else {
+      return `
+
+TUGAS KHUSUS ANALISIS MEDIA:
+Ketika menganalisis media, berikan jawaban yang komprehensif dan detail dalam bahasa Indonesia. Fokus pada:
+
+- Konten utama dan informasi penting
+- Struktur dan organisasi materi
+- Poin-poin kunci yang relevan
+- Relevansi untuk konteks akademik
+- Aplikasi praktis dalam penulisan ilmiah
+
+Jawablah pertanyaan pengguna dengan merujuk pada detail spesifik dalam media dan berikan analisis yang dapat membantu dalam konteks penulisan akademik.`;
+    }
   }
 
   private buildMessages(context: ConversationContext, userMessage: string, mediaContext?: MediaContext[]): any[] {

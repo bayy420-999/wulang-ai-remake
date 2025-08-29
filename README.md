@@ -15,6 +15,7 @@ A sophisticated WhatsApp AI bot built with TypeScript, Node.js, and Clean Archit
 - **Image Recognition**: Analyze images and provide detailed descriptions
 - **Media Storage**: Store media files with AI-generated summaries
 - **Multi-Modal Context**: Combine text and media for comprehensive responses
+- **WhatsApp-Optimized Responses**: Automatic markdown-to-plain-text conversion for optimal WhatsApp display
 
 ### 🏗️ **Robust Architecture**
 - **Clean Architecture**: Separation of concerns with Domain, Application, Infrastructure, and Presentation layers
@@ -27,6 +28,7 @@ A sophisticated WhatsApp AI bot built with TypeScript, Node.js, and Clean Archit
 - **Error Handling**: Graceful error handling with user-friendly messages
 - **Automatic Maintenance**: Scheduled cleanup of old conversations and files
 - **Graceful Shutdown**: Proper process signal handling
+- **Response Formatting**: Smart conversion of AI responses to WhatsApp-compatible format
 
 ## 📋 Prerequisites
 
@@ -39,32 +41,32 @@ A sophisticated WhatsApp AI bot built with TypeScript, Node.js, and Clean Archit
 ## 🚀 Quick Start
 
 ### 1. **Clone and Setup**
-```bash
+   ```bash
 git clone https://github.com/bayy420-999/wulang-ai-remake.git
-cd wulang-ai-remake
-npm install
-```
+   cd wulang-ai-remake
+   npm install
+   ```
 
 ### 2. **Environment Configuration**
 Create `.env` file:
-```env
+   ```env
 # Database Configuration
-DATABASE_URL="postgresql://username:password@localhost:5432/wulang_ai_db"
-
+   DATABASE_URL="postgresql://username:password@localhost:5432/wulang_ai_db"
+   
 # OpenAI Configuration
-OPENAI_API_KEY="your_openai_api_key_here"
+   OPENAI_API_KEY="your_openai_api_key_here"
 OPENAI_MODEL="gpt-4o-mini"
 TEMPERATURE="0.7"
-
-# Bot Configuration
-BOT_NAME="Wulang AI"
-RESET_KEYWORD="!reset"
+   
+   # Bot Configuration
+   BOT_NAME="Wulang AI"
+   RESET_KEYWORD="!reset"
 MAX_CONTEXT_MESSAGES="10"
-SESSION_NAME="wulang-ai-session"
-
-# Logging
-LOG_LEVEL="info"
-```
+   SESSION_NAME="wulang-ai-session"
+   
+   # Logging
+   LOG_LEVEL="info"
+   ```
 
 ### 3. **Database Setup**
 ```bash
@@ -106,6 +108,40 @@ You: "lalu successor dari hasil penjumlahan tadi?"
 Bot: "Succesor dari 2 adalah 3. Jadi, jika ada hal lain yang ingin kamu ketahui, silakan tanya!"
 ```
 
+### **WhatsApp Response Formatting**
+The bot automatically converts AI-generated markdown responses to WhatsApp-friendly plain text:
+
+**AI Response (Markdown):**
+```
+# Analysis Results
+
+This is a **detailed** analysis with:
+- Point 1
+- Point 2
+
+Visit [Google](https://google.com) for more info.
+```
+
+**WhatsApp Display:**
+```
+Analysis Results
+
+This is a *detailed* analysis with:
+• Point 1
+• Point 2
+
+Visit Google for more info.
+```
+
+**Features:**
+- ✅ **Bold Text**: `**text**` → `*text*` (WhatsApp bold)
+- ✅ **Italic Text**: `*text*` → `_text_` (WhatsApp italic)
+- ✅ **Strikethrough**: `~~text~~` → `~text~` (WhatsApp strikethrough)
+- ✅ **Code Blocks**: Preserved as monospace
+- ✅ **Lists**: Converted to bullet points
+- ✅ **Links**: URLs removed, text preserved
+- ✅ **Headers**: Converted to plain text
+
 ## 🏗️ Architecture Overview
 
 ### **Clean Architecture Layers**
@@ -138,6 +174,7 @@ Bot: "Succesor dari 2 adalah 3. Jadi, jika ada hal lain yang ingin kamu ketahui,
 │  │  Prisma Repositories        │   │ ← Data access
 │  │  OpenAIService              │   │ ← External APIs
 │  │  MediaProcessingService     │   │ ← File processing
+│  │  ResponseFormatter          │   │ ← WhatsApp formatting
 │  │  WhatsAppClient             │   │ ← WhatsApp API
 │  └─────────────────────────────┘   │
 └─────────────────────────────────────┘
@@ -159,7 +196,8 @@ src/
 ├── infrastructure/       # Infrastructure layer
 │   ├── cache/           # Caching services
 │   ├── database/        # Database repositories
-│   └── external/        # External services
+│   ├── external/        # External services
+│   └── utils/           # Utility services
 ├── lib/                  # Shared utilities
 │   ├── db.ts            # Database connection
 │   └── logger.ts        # Logging setup
@@ -363,6 +401,30 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [WhatsApp Web.js Documentation](https://docs.wwebjs.dev/)
 - [OpenAI API Documentation](https://platform.openai.com/docs)
 - [TypeScript Handbook](https://www.typescriptlang.org/docs/)
+
+## 🛠️ Technologies & Dependencies
+
+### **Core Technologies**
+- **TypeScript**: Type-safe JavaScript development
+- **Node.js**: Server-side JavaScript runtime
+- **PostgreSQL**: Relational database
+- **Prisma**: Type-safe database ORM
+- **WhatsApp Web.js**: WhatsApp client library
+- **OpenAI AI SDK**: GPT-4o-mini integration
+
+### **Key Libraries**
+- **turndown**: HTML-to-markdown conversion for response formatting
+- **winston**: Structured logging
+- **pdf-parse**: PDF text extraction
+- **jimp**: Image processing
+- **dotenv**: Environment variable management
+- **zod**: Runtime type validation
+
+### **Development Tools**
+- **Jest**: Unit testing framework
+- **ts-jest**: TypeScript testing support
+- **ESLint**: Code linting
+- **Prettier**: Code formatting
 
 ## 🚀 Deployment
 

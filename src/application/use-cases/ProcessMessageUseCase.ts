@@ -9,8 +9,11 @@ import { MessageRole } from '../../domain/entities/Message';
 import { ProcessingError, ValidationError } from '../../domain/errors/BotError';
 import { env } from '../../config/env';
 import { logError, logInfo, logDebug } from '../../lib/logger';
+import { ResponseFormatter } from '../../infrastructure/utils/ResponseFormatter';
 
 export class ProcessMessageUseCase {
+  private responseFormatter: ResponseFormatter;
+
   constructor(
     private userRepository: IUserRepository,
     private conversationRepository: IConversationRepository,
@@ -18,7 +21,9 @@ export class ProcessMessageUseCase {
     private mediaRepository: IMediaRepository,
     private aiService: IAIService,
     private mediaService: IMediaService
-  ) {}
+  ) {
+    this.responseFormatter = new ResponseFormatter();
+  }
 
   async execute(dto: ProcessMessageDto): Promise<ProcessMessageResult> {
     try {
@@ -60,6 +65,10 @@ export class ProcessMessageUseCase {
       let mediaAnalysis: string | null = null;
 
       if (dto.hasMedia && dto.mediaData) {
+        logInfo(`📄 Raw media data received: ${typeof dto.mediaData.buffer}`, 'ProcessMessageUseCase');
+        logInfo(`📄 Raw media data is Buffer: ${Buffer.isBuffer(dto.mediaData.buffer)}`, 'ProcessMessageUseCase');
+        logInfo(`📄 Raw media data length: ${Buffer.isBuffer(dto.mediaData.buffer) ? dto.mediaData.buffer.length : (dto.mediaData.buffer as string).length}`, 'ProcessMessageUseCase');
+        
         const processedMedia = await this.processMedia(dto.mediaData);
         if (processedMedia) {
           // Save media to database
@@ -73,24 +82,44 @@ export class ProcessMessageUseCase {
 
           // Analyze media with AI
           if (dto.mediaData.caption) {
+            logInfo(`📄 Sending PDF to AI: ${processedMedia.filename}`, 'ProcessMessageUseCase');
+            logInfo(`📄 PDF buffer type: ${typeof dto.mediaData.buffer}`, 'ProcessMessageUseCase');
+            logInfo(`📄 PDF buffer is Buffer: ${Buffer.isBuffer(dto.mediaData.buffer)}`, 'ProcessMessageUseCase');
+            logInfo(`📄 PDF buffer length: ${Buffer.isBuffer(dto.mediaData.buffer) ? dto.mediaData.buffer.length : (dto.mediaData.buffer as string).length}`, 'ProcessMessageUseCase');
+            
+            logInfo(`📄 About to send to AI - data type: ${typeof dto.mediaData.buffer}`, 'ProcessMessageUseCase');
+            logInfo(`📄 About to send to AI - data is Buffer: ${Buffer.isBuffer(dto.mediaData.buffer)}`, 'ProcessMessageUseCase');
+            logInfo(`📄 About to send to AI - data sample: ${Buffer.isBuffer(dto.mediaData.buffer) ? dto.mediaData.buffer.toString('hex').substring(0, 20) : (dto.mediaData.buffer as string).substring(0, 20)}`, 'ProcessMessageUseCase');
+            
             mediaAnalysis = await this.aiService.analyzeMediaWithCaption(
               {
                 type: processedMedia.type,
-                content: processedMedia.content,
+                content: typeof processedMedia.content === 'string' ? processedMedia.content : processedMedia.content.toString(),
                 filename: processedMedia.filename,
                 mimeType: dto.mediaData.mimeType,
-                data: dto.mediaData.buffer.toString('base64')
+                data: dto.mediaData.buffer
               },
               dto.mediaData.caption
             );
           } else {
-            mediaAnalysis = await this.aiService.analyzeMedia({
+            // Use analyzeMediaWithCaption with a default comprehensive analysis request
+            const defaultCaption = 'Silakan berikan analisis komprehensif dan detail dari media ini dalam bahasa Indonesia. Sertakan semua informasi penting yang dapat direferensikan dalam percakapan masa depan.';
+            logInfo(`📄 Sending PDF to AI (no caption): ${processedMedia.filename}`, 'ProcessMessageUseCase');
+            logInfo(`📄 PDF buffer type: ${typeof dto.mediaData.buffer}`, 'ProcessMessageUseCase');
+            logInfo(`📄 PDF buffer is Buffer: ${Buffer.isBuffer(dto.mediaData.buffer)}`, 'ProcessMessageUseCase');
+            logInfo(`📄 PDF buffer length: ${Buffer.isBuffer(dto.mediaData.buffer) ? dto.mediaData.buffer.length : (dto.mediaData.buffer as string).length}`, 'ProcessMessageUseCase');
+            
+            logInfo(`📄 About to send to AI (no caption) - data type: ${typeof dto.mediaData.buffer}`, 'ProcessMessageUseCase');
+            logInfo(`📄 About to send to AI (no caption) - data is Buffer: ${Buffer.isBuffer(dto.mediaData.buffer)}`, 'ProcessMessageUseCase');
+            logInfo(`📄 About to send to AI (no caption) - data sample: ${Buffer.isBuffer(dto.mediaData.buffer) ? dto.mediaData.buffer.toString('hex').substring(0, 20) : (dto.mediaData.buffer as string).substring(0, 20)}`, 'ProcessMessageUseCase');
+            
+            mediaAnalysis = await this.aiService.analyzeMediaWithCaption({
               type: processedMedia.type,
-              content: processedMedia.content,
+              content: typeof processedMedia.content === 'string' ? processedMedia.content : processedMedia.content.toString(),
               filename: processedMedia.filename,
               mimeType: dto.mediaData.mimeType,
-              data: dto.mediaData.buffer.toString('base64')
-            });
+              data: dto.mediaData.buffer
+            }, defaultCaption);
           }
 
           // Update media with analysis
@@ -157,15 +186,16 @@ export class ProcessMessageUseCase {
       let aiResponse: string;
       if (dto.hasMedia && mediaAnalysis) {
         if (dto.mediaData?.caption) {
-          // Media + Caption: Use the analysis as response
+          // Media + Caption: Use the analysis as response (already formatted by AI service)
           aiResponse = mediaAnalysis;
         } else {
           // Media only: Provide comprehensive summary and ask what they want to do
           const mediaType = dto.mediaType?.includes('image') ? 'gambar' : 'dokumen';
-          aiResponse = `📎 **Analisis Lengkap ${mediaType.toUpperCase()}**\n\n${mediaAnalysis}\n\n---\n\nApa yang ingin Anda ketahui lebih lanjut tentang ${mediaType} ini? Silakan tanyakan apa saja yang ingin Anda analisis atau ketahui lebih detail.`;
+          const summaryText = `📎 Analisis Lengkap ${mediaType.toUpperCase()}\n\n${mediaAnalysis}\n\n---\n\nApa yang ingin Anda ketahui lebih lanjut tentang ${mediaType} ini? Silakan tanyakan apa saja yang ingin Anda analisis atau ketahui lebih detail.`;
+          aiResponse = this.responseFormatter.formatForWhatsApp(summaryText);
         }
       } else {
-        // Text only: Generate normal response
+        // Text only: Generate normal response (already formatted by AI service)
         aiResponse = await this.aiService.generateResponse(dto.message, context);
       }
 
@@ -186,7 +216,7 @@ export class ProcessMessageUseCase {
     } catch (error) {
       return {
         success: false,
-        response: '❌ Maaf, saya mengalami kesalahan saat memproses pesan Anda. Silakan coba lagi nanti.',
+        response: this.responseFormatter.formatError('Maaf, saya mengalami kesalahan saat memproses pesan Anda. Silakan coba lagi nanti.'),
         conversationId: '',
         error: error instanceof Error ? error.message : 'Unknown error'
       };

@@ -1,6 +1,6 @@
 export interface MediaProcessingResult {
   type: 'pdf' | 'image';
-  content: string;
+  content: string | Buffer;
   filename: string;
   metadata?: Record<string, any>;
 }

@@ -18,12 +18,11 @@ export class MediaProcessingService implements IMediaService {
     try {
       logInfo(`Processing PDF: ${filename}`, 'MediaProcessingService');
       
-      const data = await  pdf(buffer);
-      const content = data.text || 'No text content found in PDF';
+      const data = await pdf(buffer);
       
       return {
         type: 'pdf',
-        content,
+        content: data.text || 'No text content found in PDF',
         filename,
         metadata: {
           pages: data.numpages,
