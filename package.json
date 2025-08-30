@@ -36,7 +36,7 @@
     "prisma": "^5.19.1",
     "qrcode-terminal": "^0.12.0",
     "turndown": "^7.2.1",
-    "whatsapp-web.js": "^1.25.0",
+    "whatsapp-web.js": "https://github.com/BenyFilho/whatsapp-web.js#fix_event_ready",
     "winston": "^3.14.2",
     "zod": "^3.25.76"
   },
