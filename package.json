@@ -45,6 +45,7 @@
     "@types/jest": "^30.0.0",
     "@types/node": "^22.5.0",
     "@types/qrcode-terminal": "^0.12.2",
+    "@types/turndown": "^5.0.5",
     "jest": "^30.1.1",
     "ts-jest": "^29.4.1",
     "tsx": "^4.17.0",
