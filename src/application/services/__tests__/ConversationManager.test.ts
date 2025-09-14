@@ -9,6 +9,12 @@ const mockUserRepository = {
   update: jest.fn(),
 };
 
+const mockGroupRepository = {
+  findByGroupId: jest.fn(),
+  create: jest.fn(),
+  update: jest.fn(),
+};
+
 const mockConversationRepository = {
   findActiveByUserId: jest.fn(),
   create: jest.fn(),
@@ -40,6 +46,7 @@ describe('ConversationManager', () => {
     // Create the conversation manager with mocked dependencies
     conversationManager = new ConversationManager(
       mockUserRepository as any,
+      mockGroupRepository as any,
       mockConversationRepository as any,
       mockMessageRepository as any,
       mockAIService as any

@@ -14,7 +14,17 @@
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
-    "maintenance": "tsx src/presentation/services/MaintenanceService.ts"
+    "maintenance": "tsx src/presentation/services/MaintenanceService.ts",
+    "pm2:start": "pm2 start ecosystem.config.js",
+    "pm2:stop": "pm2 stop wulang-ai-bot",
+    "pm2:restart": "pm2 restart wulang-ai-bot",
+    "pm2:reload": "pm2 reload wulang-ai-bot",
+    "pm2:delete": "pm2 delete wulang-ai-bot",
+    "pm2:logs": "pm2 logs wulang-ai-bot",
+    "pm2:monit": "pm2 monit",
+    "pm2:status": "pm2 status",
+    "pm2:dev": "pm2 start ecosystem.config.js --env development",
+    "pm2:prod": "pm2 start ecosystem.config.js --env production"
   },
   "keywords": [
     "whatsapp",

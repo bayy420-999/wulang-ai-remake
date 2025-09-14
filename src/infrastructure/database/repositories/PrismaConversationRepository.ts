@@ -24,7 +24,7 @@ export class PrismaConversationRepository implements IConversationRepository {
         }
       });
 
-      return conversation;
+      return conversation ? this.mapPrismaConversationToConversation(conversation) : null;
     } catch (error) {
       throw new DatabaseError(`Failed to find conversation by ID: ${error}`);
     }
@@ -42,9 +42,27 @@ export class PrismaConversationRepository implements IConversationRepository {
         }
       });
 
-      return conversations;
+      return conversations.map(this.mapPrismaConversationToConversation);
     } catch (error) {
       throw new DatabaseError(`Failed to find conversations by user ID: ${error}`);
+    }
+  }
+
+  async findByGroupId(groupId: string): Promise<Conversation[]> {
+    try {
+      const conversations = await this.prisma.conversation.findMany({
+        where: { groupId },
+        orderBy: { updatedAt: 'desc' },
+        include: {
+          _count: {
+            select: { messages: true }
+          }
+        }
+      });
+
+      return conversations.map(this.mapPrismaConversationToConversation);
+    } catch (error) {
+      throw new DatabaseError(`Failed to find conversations by group ID: ${error}`);
     }
   }
 
@@ -74,7 +92,7 @@ export class PrismaConversationRepository implements IConversationRepository {
         }
       });
 
-      return conversation;
+      return conversation ? this.mapPrismaConversationToConversation(conversation) : null;
     } catch (error) {
       throw new DatabaseError(`Failed to find active conversation by user ID: ${error}`);
     }
@@ -106,7 +124,7 @@ export class PrismaConversationRepository implements IConversationRepository {
         }
       });
 
-      return conversation;
+      return conversation ? this.mapPrismaConversationToConversation(conversation) : null;
     } catch (error) {
       throw new DatabaseError(`Failed to find active conversation by group ID: ${error}`);
     }
@@ -140,7 +158,7 @@ export class PrismaConversationRepository implements IConversationRepository {
         }
       });
 
-      return newConversation;
+      return this.mapPrismaConversationToConversation(newConversation);
     } catch (error) {
       throw new DatabaseError(`Failed to create conversation: ${error}`);
     }
@@ -165,7 +183,7 @@ export class PrismaConversationRepository implements IConversationRepository {
         }
       });
 
-      return updatedConversation;
+      return this.mapPrismaConversationToConversation(updatedConversation);
     } catch (error) {
       throw new DatabaseError(`Failed to update conversation: ${error}`);
     }
@@ -211,6 +229,36 @@ export class PrismaConversationRepository implements IConversationRepository {
     }
   }
 
+  async deleteByGroupId(groupId: string): Promise<void> {
+    try {
+      // First, get all conversations for the group
+      const conversations = await this.prisma.conversation.findMany({
+        where: { groupId },
+        select: { id: true }
+      });
+
+      const conversationIds = conversations.map(conv => conv.id);
+
+      // Delete all messages in these conversations first
+      if (conversationIds.length > 0) {
+        await this.prisma.message.deleteMany({
+          where: {
+            conversationId: {
+              in: conversationIds
+            }
+          }
+        });
+      }
+
+      // Then delete all conversations for the group
+      await this.prisma.conversation.deleteMany({
+        where: { groupId }
+      });
+    } catch (error) {
+      throw new DatabaseError(`Failed to delete conversations by group ID: ${error}`);
+    }
+  }
+
   async cleanupOldConversations(days: number): Promise<number> {
     try {
       const cutoffDate = new Date();
@@ -252,5 +300,15 @@ export class PrismaConversationRepository implements IConversationRepository {
     } catch (error) {
       throw new DatabaseError(`Failed to cleanup old conversations: ${error}`);
     }
+  }
+
+  private mapPrismaConversationToConversation(prismaConversation: any): Conversation {
+    return {
+      id: prismaConversation.id,
+      userId: prismaConversation.userId || undefined,
+      groupId: prismaConversation.groupId || undefined,
+      createdAt: prismaConversation.createdAt,
+      updatedAt: prismaConversation.updatedAt
+    };
   }
 }

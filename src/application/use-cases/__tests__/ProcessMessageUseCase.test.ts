@@ -11,6 +11,12 @@ const mockUserRepository = {
   update: jest.fn(),
 };
 
+const mockGroupRepository = {
+  findByGroupId: jest.fn(),
+  create: jest.fn(),
+  update: jest.fn(),
+};
+
 const mockConversationRepository = {
   findActiveByUserId: jest.fn(),
   create: jest.fn(),

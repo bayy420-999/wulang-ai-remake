@@ -95,7 +95,7 @@ describe('Conversation Entity', () => {
       };
 
       expect(conversation.userId).toBe(longUserId);
-      expect(conversation.userId.length).toBeGreaterThan(100);
+      expect(conversation.userId?.length).toBeGreaterThan(100);
     });
 
     it('should handle special characters in user IDs', () => {

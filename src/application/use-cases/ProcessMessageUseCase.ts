@@ -36,7 +36,7 @@ export class ProcessMessageUseCase {
 
       const isGroupMessage = dto.phoneNumber.includes('@g.us');
       let conversation;
-      let user;
+      let user: any = undefined;
 
       if (isGroupMessage) {
         // Handle group message
