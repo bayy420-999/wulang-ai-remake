@@ -12,7 +12,8 @@ export class PrismaMediaRepository implements IMediaRepository {
       url: prismaMedia.url,
       type: prismaMedia.type,
       summary: prismaMedia.summary || undefined,
-      userId: prismaMedia.userId,
+      userId: prismaMedia.userId || undefined,
+      groupId: prismaMedia.groupId || undefined,
       createdAt: prismaMedia.createdAt
     };
   }
@@ -26,6 +27,13 @@ export class PrismaMediaRepository implements IMediaRepository {
             select: {
               id: true,
               phoneNumber: true,
+              name: true
+            }
+          },
+          group: {
+            select: {
+              id: true,
+              groupId: true,
               name: true
             }
           },
@@ -72,6 +80,30 @@ export class PrismaMediaRepository implements IMediaRepository {
     }
   }
 
+  async findByGroupId(groupId: string): Promise<Media[]> {
+    try {
+      const media = await this.prisma.media.findMany({
+        where: { groupId },
+        include: {
+          messages: {
+            select: {
+              id: true,
+              createdAt: true,
+              role: true,
+              content: true,
+              mediaId: true,
+              conversationId: true
+            }
+          }
+        }
+      });
+
+      return media.map(this.mapPrismaMediaToMedia);
+    } catch (error) {
+      throw new DatabaseError(`Failed to find media by group ID: ${error}`);
+    }
+  }
+
   async create(media: CreateMediaDto): Promise<Media> {
     try {
       const newMedia = await this.prisma.media.create({
@@ -79,13 +111,21 @@ export class PrismaMediaRepository implements IMediaRepository {
           url: media.url,
           type: media.type,
           summary: media.summary,
-          userId: media.userId
+          userId: media.userId,
+          groupId: media.groupId
         },
         include: {
           user: {
             select: {
               id: true,
               phoneNumber: true,
+              name: true
+            }
+          },
+          group: {
+            select: {
+              id: true,
+              groupId: true,
               name: true
             }
           },
@@ -120,6 +160,13 @@ export class PrismaMediaRepository implements IMediaRepository {
             select: {
               id: true,
               phoneNumber: true,
+              name: true
+            }
+          },
+          group: {
+            select: {
+              id: true,
+              groupId: true,
               name: true
             }
           },
@@ -159,6 +206,16 @@ export class PrismaMediaRepository implements IMediaRepository {
       });
     } catch (error) {
       throw new DatabaseError(`Failed to delete media by user ID: ${error}`);
+    }
+  }
+
+  async deleteByGroupId(groupId: string): Promise<void> {
+    try {
+      await this.prisma.media.deleteMany({
+        where: { groupId }
+      });
+    } catch (error) {
+      throw new DatabaseError(`Failed to delete media by group ID: ${error}`);
     }
   }
 }

@@ -61,6 +61,13 @@ export class PrismaConversationRepository implements IConversationRepository {
               name: true
             }
           },
+          group: {
+            select: {
+              id: true,
+              groupId: true,
+              name: true
+            }
+          },
           _count: {
             select: { messages: true }
           }
@@ -73,17 +80,57 @@ export class PrismaConversationRepository implements IConversationRepository {
     }
   }
 
+  async findActiveByGroupId(groupId: string): Promise<Conversation | null> {
+    try {
+      const conversation = await this.prisma.conversation.findFirst({
+        where: { groupId },
+        orderBy: { updatedAt: 'desc' },
+        include: {
+          user: {
+            select: {
+              id: true,
+              phoneNumber: true,
+              name: true
+            }
+          },
+          group: {
+            select: {
+              id: true,
+              groupId: true,
+              name: true
+            }
+          },
+          _count: {
+            select: { messages: true }
+          }
+        }
+      });
+
+      return conversation;
+    } catch (error) {
+      throw new DatabaseError(`Failed to find active conversation by group ID: ${error}`);
+    }
+  }
+
   async create(conversation: CreateConversationDto): Promise<Conversation> {
     try {
       const newConversation = await this.prisma.conversation.create({
         data: {
-          userId: conversation.userId
+          userId: conversation.userId,
+          groupId: conversation.groupId
         },
         include: {
           user: {
             select: {
               id: true,
               phoneNumber: true,
+              name: true
+            }
+          },
+          group: {
+            select: {
+              id: true,
+              groupId: true,
               name: true
             }
           },

@@ -18,11 +18,23 @@ model User {
   createdAt     DateTime       @default(now())
 }
 
+// Group chat information
+model Group {
+  id            String         @id @default(cuid())
+  groupId       String         @unique // WhatsApp group ID (without @g.us)
+  name          String?
+  conversations Conversation[]
+  media         Media[]        // Media files shared in this group
+  createdAt     DateTime       @default(now())
+}
+
 // A conversation thread (can reset for new topics)
 model Conversation {
   id        String    @id @default(cuid())
-  user      User      @relation(fields: [userId], references: [id])
-  userId    String
+  user      User?     @relation(fields: [userId], references: [id])
+  userId    String?
+  group     Group?    @relation(fields: [groupId], references: [id])
+  groupId   String?
   messages  Message[]
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -52,8 +64,10 @@ model Media {
   url       String    // where the file is stored (S3/Cloudinary/local)
   type      String    // "image", "pdf", etc.
   summary   String?   // optional AI-generated summary/parsed text
-  user      User      @relation(fields: [userId], references: [id])
-  userId    String
+  user      User?     @relation(fields: [userId], references: [id])
+  userId    String?
+  group     Group?    @relation(fields: [groupId], references: [id])
+  groupId   String?
   messages  Message[] // relation to messages that use this media
   createdAt DateTime  @default(now())
 }

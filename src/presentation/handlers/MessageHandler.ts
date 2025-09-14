@@ -43,8 +43,8 @@ export class MessageHandler {
 
   async handleMessage(message: Message): Promise<{ shouldRespond: boolean; response?: string }> {
     try {
-      // Skip messages from groups and from self
-      if (message.fromMe || message.from.includes('@g.us')) {
+      // Skip messages from self only (allow group messages)
+      if (message.fromMe) {
         return { shouldRespond: false };
       }
 
@@ -64,6 +64,13 @@ export class MessageHandler {
       const contact = await message.getContact();
       const phoneNumber = this.extractPhoneNumber(message.from);
       const userName = contact.name || contact.pushname;
+      const isGroupMessage = message.from.includes('@g.us');
+
+      // Check if group messages are enabled
+      if (isGroupMessage && !env.ENABLE_GROUP_MESSAGES) {
+        logDebug(`Group messages are disabled, ignoring message from group: ${phoneNumber}`, 'MessageHandler');
+        return { shouldRespond: false };
+      }
 
       // Check for reset command
       if (this.isResetCommand(message.body)) {
@@ -75,8 +82,15 @@ export class MessageHandler {
       const hasWulangKeyword = this.hasWulangKeyword(message.body);
       
       if (!hasWulangKeyword) {
-        logDebug(`Ignoring message without "wulang" keyword from ${phoneNumber}`, 'MessageHandler');
-        return { shouldRespond: true, response: this.responseFormatter.formatForWhatsApp('Halo! Ada yang bisa saya bantu? tolong panggil saya dengan menyebut "wulang" dalam pesan') };
+        if (isGroupMessage) {
+          // For group messages, completely ignore messages without "wulang" keyword
+          logDebug(`Ignoring group message without "wulang" keyword from ${phoneNumber}`, 'MessageHandler');
+          return { shouldRespond: false };
+        } else {
+          // For individual messages, still respond asking for "wulang" keyword
+          logDebug(`Ignoring message without "wulang" keyword from ${phoneNumber}`, 'MessageHandler');
+          return { shouldRespond: true, response: this.responseFormatter.formatForWhatsApp('Halo! Ada yang bisa saya bantu? tolong panggil saya dengan menyebut "wulang" dalam pesan') };
+        }
       }
 
       // Use message content as-is (no cleaning)
@@ -166,7 +180,7 @@ export class MessageHandler {
       logDebug(`Processing message for ${phoneNumber}: "${messageToProcess}"`, 'MessageHandler');
       
       const result = await this.processMessageUseCase.execute({
-        phoneNumber,
+        phoneNumber: isGroupMessage ? message.from : phoneNumber, // Pass full WhatsApp ID for groups
         message: messageToProcess,
         userName,
         hasMedia: message.hasMedia,
@@ -199,11 +213,12 @@ export class MessageHandler {
   private isResetCommand(message: string): boolean {
     const lowerMessage = message.toLowerCase().trim();
     const resetKeyword = env.RESET_KEYWORD.toLowerCase();
-    return lowerMessage === resetKeyword || lowerMessage.startsWith(resetKeyword);
+    return lowerMessage === resetKeyword || lowerMessage.startsWith(resetKeyword + ' ');
   }
 
   private extractPhoneNumber(whatsappId: string): string {
-    return whatsappId.replace('@c.us', '');
+    // Handle both individual chats (@c.us) and group chats (@g.us)
+    return whatsappId.replace('@c.us', '').replace('@g.us', '');
   }
 
   private getMediaType(mimeType: string): string {

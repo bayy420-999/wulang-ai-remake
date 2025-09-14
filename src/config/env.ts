@@ -14,6 +14,10 @@ const envSchema = z.object({
   MAX_CONTEXT_MESSAGES: z.string().transform(Number).pipe(z.number().positive()).default('10'),
   SESSION_NAME: z.string().default('wulang-ai-session'),
   LOG_LEVEL: z.enum(['error', 'warn', 'info', 'debug']).default('info'),
+  
+  // Group settings
+  ENABLE_GROUP_MESSAGES: z.string().transform(val => val === 'true').default('true'),
+  GROUP_RESPONSE_DELAY: z.string().transform(Number).pipe(z.number().min(0)).default('1000'),
 });
 
 type Env = z.infer<typeof envSchema>;

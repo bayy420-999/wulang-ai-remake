@@ -1,4 +1,5 @@
 import { IUserRepository } from '../../domain/interfaces/repositories/IUserRepository';
+import { IGroupRepository } from '../../domain/interfaces/repositories/IGroupRepository';
 import { IConversationRepository } from '../../domain/interfaces/repositories/IConversationRepository';
 import { IMessageRepository } from '../../domain/interfaces/repositories/IMessageRepository';
 import { IMediaRepository } from '../../domain/interfaces/repositories/IMediaRepository';
@@ -16,6 +17,7 @@ export class ProcessMessageUseCase {
 
   constructor(
     private userRepository: IUserRepository,
+    private groupRepository: IGroupRepository,
     private conversationRepository: IConversationRepository,
     private messageRepository: IMessageRepository,
     private mediaRepository: IMediaRepository,
@@ -32,32 +34,59 @@ export class ProcessMessageUseCase {
         throw new ValidationError('Phone number and message are required');
       }
 
-      // Get or create user
-      let user = await this.userRepository.findByPhoneNumber(dto.phoneNumber);
-      if (!user) {
-        // Create new user if not found
-        user = await this.userRepository.create({ 
-          phoneNumber: dto.phoneNumber, 
-          name: dto.userName 
-        });
-        logInfo(`👤 Created new user: ${user.name || 'Unknown'} (${dto.phoneNumber})`, 'ProcessMessageUseCase');
-      } else {
-        // Update user name if provided and not set
-        if (dto.userName && !user.name) {
-          user = await this.userRepository.update(user.id, { name: dto.userName });
-          logInfo(`👤 Updated user name: ${user.name} (${dto.phoneNumber})`, 'ProcessMessageUseCase');
-        } else {
-          logInfo(`👤 Using existing user: ${user.name || 'Unknown'} (${dto.phoneNumber})`, 'ProcessMessageUseCase');
-        }
-      }
+      const isGroupMessage = dto.phoneNumber.includes('@g.us');
+      let conversation;
+      let user;
 
-      // Get or create active conversation
-      let conversation = await this.conversationRepository.findActiveByUserId(user.id);
-      if (!conversation) {
-        conversation = await this.conversationRepository.create({ userId: user.id });
-        logInfo(`💬 Created new conversation ${conversation.id} for user ${user.id}`, 'ProcessMessageUseCase');
+      if (isGroupMessage) {
+        // Handle group message
+        const groupId = dto.phoneNumber.replace('@g.us', '');
+        let group = await this.groupRepository.findByGroupId(groupId);
+        
+        if (!group) {
+          group = await this.groupRepository.create({ 
+            groupId, 
+            name: dto.userName 
+          });
+          logInfo(`👥 Created new group: ${group.name || 'Unknown'} (${groupId})`, 'ProcessMessageUseCase');
+        } else {
+          logInfo(`👥 Using existing group: ${group.name || 'Unknown'} (${groupId})`, 'ProcessMessageUseCase');
+        }
+
+        // Get or create active conversation for group
+        conversation = await this.conversationRepository.findActiveByGroupId(group.id);
+        if (!conversation) {
+          conversation = await this.conversationRepository.create({ groupId: group.id });
+          logInfo(`💬 Created new conversation ${conversation.id} for group ${group.id}`, 'ProcessMessageUseCase');
+        } else {
+          logInfo(`💬 Using existing conversation ${conversation.id} for group ${group.id}`, 'ProcessMessageUseCase');
+        }
       } else {
-        logInfo(`💬 Using existing conversation ${conversation.id} for user ${user.id}`, 'ProcessMessageUseCase');
+        // Handle individual user message
+        let user = await this.userRepository.findByPhoneNumber(dto.phoneNumber);
+        if (!user) {
+          user = await this.userRepository.create({ 
+            phoneNumber: dto.phoneNumber, 
+            name: dto.userName 
+          });
+          logInfo(`👤 Created new user: ${user.name || 'Unknown'} (${dto.phoneNumber})`, 'ProcessMessageUseCase');
+        } else {
+          if (dto.userName && !user.name) {
+            user = await this.userRepository.update(user.id, { name: dto.userName });
+            logInfo(`👤 Updated user name: ${user.name} (${dto.phoneNumber})`, 'ProcessMessageUseCase');
+          } else {
+            logInfo(`👤 Using existing user: ${user.name || 'Unknown'} (${dto.phoneNumber})`, 'ProcessMessageUseCase');
+          }
+        }
+
+        // Get or create active conversation for user
+        conversation = await this.conversationRepository.findActiveByUserId(user.id);
+        if (!conversation) {
+          conversation = await this.conversationRepository.create({ userId: user.id });
+          logInfo(`💬 Created new conversation ${conversation.id} for user ${user.id}`, 'ProcessMessageUseCase');
+        } else {
+          logInfo(`💬 Using existing conversation ${conversation.id} for user ${user.id}`, 'ProcessMessageUseCase');
+        }
       }
 
       // Process media if present
@@ -71,12 +100,13 @@ export class ProcessMessageUseCase {
         
         const processedMedia = await this.processMedia(dto.mediaData);
         if (processedMedia) {
-          // Save media to database
+          // Save media to database - support both user and group media
           const media = await this.mediaRepository.create({
             url: processedMedia.filename,
             type: processedMedia.type,
             summary: undefined, // Will be updated after analysis
-            userId: user.id
+            userId: user?.id,
+            groupId: isGroupMessage ? conversation.groupId : undefined
           });
           mediaId = media.id;
 

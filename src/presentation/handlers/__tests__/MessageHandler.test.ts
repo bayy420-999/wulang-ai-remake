@@ -22,6 +22,7 @@ jest.mock('../../../lib/logger', () => ({
 jest.mock('../../../config/env', () => ({
   env: {
     RESET_KEYWORD: '!reset',
+    ENABLE_GROUP_MESSAGES: true,
     // Add other required env vars
     DATABASE_URL: 'test-db-url',
     OPENAI_API_KEY: 'test-api-key',
@@ -103,12 +104,26 @@ describe('MessageHandler', () => {
   });
 
   describe('handleMessage', () => {
-    it('should skip messages from groups', async () => {
+    it('should process messages from groups with wulang keyword', async () => {
       mockMessage.from = 'group-id@g.us';
+      mockMessage.body = 'wulang hello from group';
+      
+      mockProcessMessageUseCase.execute.mockResolvedValue(
+        createMockProcessResult(true, 'Hello from group!')
+      );
 
       const result = await messageHandler.handleMessage(mockMessage as Message);
 
-      expect(result.shouldRespond).toBe(false);
+      expect(result.shouldRespond).toBe(true);
+      expect(result.response).toBe('Hello from group!');
+      expect(mockProcessMessageUseCase.execute).toHaveBeenCalledWith({
+        phoneNumber: 'group-id@g.us',
+        message: 'wulang hello from group',
+        userName: 'John Doe',
+        hasMedia: false,
+        mediaType: 'chat',
+        mediaData: undefined
+      });
     });
 
     it('should skip messages from self', async () => {
@@ -164,8 +179,9 @@ describe('MessageHandler', () => {
       expect(result.shouldRespond).toBe(true);
     });
 
-    it('should respond to messages without wulang keyword', async () => {
+    it('should respond to individual messages without wulang keyword', async () => {
       mockMessage.body = 'Hello, how are you?';
+      mockMessage.from = '6281234567890@c.us'; // Individual message
       const defaultResponse = 'Halo! Ada yang bisa saya bantu? tolong panggil saya dengan menyebut "wulang" dalam pesan';
       
       mockResponseFormatter.formatForWhatsApp.mockReturnValue(defaultResponse);
@@ -177,6 +193,17 @@ describe('MessageHandler', () => {
       expect(mockResponseFormatter.formatForWhatsApp).toHaveBeenCalledWith(
         'Halo! Ada yang bisa saya bantu? tolong panggil saya dengan menyebut "wulang" dalam pesan'
       );
+    });
+
+    it('should ignore group messages without wulang keyword', async () => {
+      mockMessage.body = 'Hello, how are you?';
+      mockMessage.from = 'group-id@g.us'; // Group message
+
+      const result = await messageHandler.handleMessage(mockMessage as Message);
+
+      expect(result.shouldRespond).toBe(false);
+      expect(mockResponseFormatter.formatForWhatsApp).not.toHaveBeenCalled();
+      expect(mockProcessMessageUseCase.execute).not.toHaveBeenCalled();
     });
 
     it('should process messages with wulang keyword', async () => {
@@ -237,8 +264,9 @@ describe('MessageHandler', () => {
       expect(result.response).toBe(aiResponse);
     });
 
-    it('should handle media messages without caption', async () => {
-      mockMessage.body = '';
+    it('should handle media messages without caption for individual messages', async () => {
+      mockMessage.body = 'wulang'; // Include wulang keyword
+      mockMessage.from = '6281234567890@c.us'; // Individual message
       mockMessage.hasMedia = true;
       mockMessage.type = 'image';
       
@@ -249,25 +277,70 @@ describe('MessageHandler', () => {
         mimetype: 'image/jpeg'
       });
 
-      const mediaResponse = '📎 Saya telah menerima gambar yang Anda kirim.\n\nApa yang ingin Anda ketahui tentang gambar ini? Silakan tanyakan apa saja yang ingin Anda analisis atau ketahui.';
-      mockResponseFormatter.formatForWhatsApp.mockReturnValue(mediaResponse);
+      const aiResponse = 'I can see this image...';
+      mockProcessMessageUseCase.execute.mockResolvedValue(
+        createMockProcessResult(true, aiResponse)
+      );
 
       const result = await messageHandler.handleMessage(mockMessage as Message);
 
-      expect(mockConversationManager.storePendingMedia).toHaveBeenCalledWith(
-        '6281234567890',
-        {
+      expect(mockProcessMessageUseCase.execute).toHaveBeenCalledWith({
+        phoneNumber: '6281234567890',
+        message: 'wulang',
+        userName: 'John Doe',
+        hasMedia: true,
+        mediaType: 'image',
+        mediaData: {
           buffer: expect.any(Buffer),
           filename: 'test-image.jpg',
-          mimeType: 'image/jpeg'
+          mimeType: 'image/jpeg',
+          caption: 'wulang'
         }
-      );
+      });
       expect(result.shouldRespond).toBe(true);
-      expect(result.response).toBe(mediaResponse);
+      expect(result.response).toBe(aiResponse);
     });
 
-    it('should handle PDF media messages', async () => {
+    it('should handle media messages without caption for group messages', async () => {
+      mockMessage.body = 'wulang'; // Include wulang keyword for group
+      mockMessage.from = 'group-id@g.us'; // Group message
+      mockMessage.hasMedia = true;
+      mockMessage.type = 'image';
+      
+      const mediaBuffer = Buffer.from('fake-image-data');
+      mockMessage.downloadMedia.mockResolvedValue({
+        data: mediaBuffer.toString('base64'),
+        filename: 'test-image.jpg',
+        mimetype: 'image/jpeg'
+      });
+
+      const aiResponse = 'I can see this image...';
+      mockProcessMessageUseCase.execute.mockResolvedValue(
+        createMockProcessResult(true, aiResponse)
+      );
+
+      const result = await messageHandler.handleMessage(mockMessage as Message);
+
+      expect(mockProcessMessageUseCase.execute).toHaveBeenCalledWith({
+        phoneNumber: 'group-id@g.us',
+        message: 'wulang',
+        userName: 'John Doe',
+        hasMedia: true,
+        mediaType: 'image',
+        mediaData: {
+          buffer: expect.any(Buffer),
+          filename: 'test-image.jpg',
+          mimeType: 'image/jpeg',
+          caption: 'wulang'
+        }
+      });
+      expect(result.shouldRespond).toBe(true);
+      expect(result.response).toBe(aiResponse);
+    });
+
+    it('should handle PDF media messages for individual messages', async () => {
       mockMessage.body = '';
+      mockMessage.from = '6281234567890@c.us'; // Individual message
       mockMessage.hasMedia = true;
       mockMessage.type = 'document';
       
@@ -287,8 +360,9 @@ describe('MessageHandler', () => {
       expect(result.response).toBe(mediaResponse);
     });
 
-    it('should handle pending media with question', async () => {
-      mockMessage.body = 'What is in this image?';
+    it('should handle pending media with question for individual messages', async () => {
+      mockMessage.body = 'wulang What is in this image?';
+      mockMessage.from = '6281234567890@c.us'; // Individual message
       mockMessage.hasMedia = false;
       
       const pendingMedia = {
@@ -310,7 +384,7 @@ describe('MessageHandler', () => {
 
       expect(mockProcessMessageUseCase.execute).toHaveBeenCalledWith({
         phoneNumber: '6281234567890',
-        message: 'What is in this image?',
+        message: 'wulang What is in this image?',
         userName: 'John Doe',
         hasMedia: true,
         mediaType: 'image',
@@ -318,7 +392,7 @@ describe('MessageHandler', () => {
           buffer: pendingMedia.buffer,
           filename: pendingMedia.filename,
           mimeType: pendingMedia.mimeType,
-          caption: 'What is in this image?'
+          caption: 'wulang What is in this image?'
         }
       });
       expect(mockConversationManager.removePendingMedia).toHaveBeenCalledWith('6281234567890');
@@ -467,7 +541,7 @@ describe('MessageHandler', () => {
   });
 
   describe('Private methods', () => {
-    it('should detect wulang keyword correctly', async () => {
+    it('should detect wulang keyword correctly for individual messages', async () => {
       const testCases = [
         { message: 'wulang help me', expected: true },
         { message: 'WULANG help me', expected: true },
@@ -482,6 +556,7 @@ describe('MessageHandler', () => {
       for (let i = 0; i < testCases.length; i++) {
         const testCase = testCases[i];
         mockMessage.body = testCase.message;
+        mockMessage.from = '6281234567890@c.us'; // Individual message
         mockMessage.id = { _serialized: `test-message-id-${i}` };
         mockProcessMessageUseCase.execute.mockResolvedValue(
           createMockProcessResult(true, 'Test response')
@@ -502,7 +577,43 @@ describe('MessageHandler', () => {
       }
     });
 
-    it('should detect reset command correctly', async () => {
+    it('should detect wulang keyword correctly for group messages', async () => {
+      const testCases = [
+        { message: 'wulang help me', expected: true },
+        { message: 'WULANG help me', expected: true },
+        { message: 'Hello wulang', expected: true },
+        { message: 'Hello Wulang', expected: true },
+        { message: 'Hello', expected: false },
+        { message: 'wulang', expected: true },
+        { message: '  wulang  ', expected: true },
+        { message: '', expected: false },
+      ];
+
+      for (let i = 0; i < testCases.length; i++) {
+        const testCase = testCases[i];
+        mockMessage.body = testCase.message;
+        mockMessage.from = 'group-id@g.us'; // Group message
+        mockMessage.id = { _serialized: `test-group-message-id-${i}` };
+        mockProcessMessageUseCase.execute.mockResolvedValue(
+          createMockProcessResult(true, 'Test response')
+        );
+
+        const result = await messageHandler.handleMessage(mockMessage as Message);
+        
+        if (testCase.expected) {
+          expect(result.shouldRespond).toBe(true);
+          expect(mockProcessMessageUseCase.execute).toHaveBeenCalled();
+        } else {
+          expect(result.shouldRespond).toBe(false);
+          expect(mockProcessMessageUseCase.execute).not.toHaveBeenCalled();
+          expect(mockResponseFormatter.formatForWhatsApp).not.toHaveBeenCalled();
+        }
+        
+        jest.clearAllMocks();
+      }
+    });
+
+    it('should detect reset command correctly for individual messages', async () => {
       const testCases = [
         { message: '!reset', expected: true },
         { message: '!RESET', expected: true },
@@ -515,6 +626,7 @@ describe('MessageHandler', () => {
       for (let i = 0; i < testCases.length; i++) {
         const testCase = testCases[i];
         mockMessage.body = testCase.message;
+        mockMessage.from = '6281234567890@c.us'; // Individual message
         mockMessage.id = { _serialized: `reset-test-message-id-${i}` };
         mockResetConversationUseCase.execute.mockResolvedValue({
           success: true,
@@ -534,7 +646,7 @@ describe('MessageHandler', () => {
       }
     });
 
-    it('should determine media type correctly', async () => {
+    it('should determine media type correctly for individual messages', async () => {
       const testCases = [
         { mimeType: 'image/jpeg', expected: 'image' },
         { mimeType: 'image/png', expected: 'image' },
@@ -546,7 +658,8 @@ describe('MessageHandler', () => {
 
       for (let i = 0; i < testCases.length; i++) {
         const testCase = testCases[i];
-        mockMessage.body = '';
+        mockMessage.body = 'wulang'; // Include wulang keyword
+        mockMessage.from = '6281234567890@c.us'; // Individual message
         mockMessage.hasMedia = true;
         mockMessage.id = { _serialized: `media-test-message-id-${i}` };
         mockMessage.downloadMedia.mockResolvedValue({
@@ -555,14 +668,20 @@ describe('MessageHandler', () => {
           mimetype: testCase.mimeType
         });
 
-        mockResponseFormatter.formatForWhatsApp.mockReturnValue('Media response');
+        mockProcessMessageUseCase.execute.mockResolvedValue(
+          createMockProcessResult(true, 'Media response')
+        );
 
         await messageHandler.handleMessage(mockMessage as Message);
 
-        expect(mockConversationManager.storePendingMedia).toHaveBeenCalledWith(
-          '6281234567890',
+        expect(mockProcessMessageUseCase.execute).toHaveBeenCalledWith(
           expect.objectContaining({
-            mimeType: testCase.mimeType
+            phoneNumber: '6281234567890',
+            message: 'wulang',
+            hasMedia: true,
+            mediaData: expect.objectContaining({
+              mimeType: testCase.mimeType
+            })
           })
         );
 
@@ -597,8 +716,9 @@ describe('MessageHandler', () => {
   });
 
   describe('Edge cases', () => {
-    it('should handle empty message body', async () => {
+    it('should handle empty message body for individual messages', async () => {
       mockMessage.body = '';
+      mockMessage.from = '6281234567890@c.us'; // Individual message
       mockMessage.hasMedia = false;
 
       const result = await messageHandler.handleMessage(mockMessage as Message);
@@ -609,8 +729,20 @@ describe('MessageHandler', () => {
       );
     });
 
-    it('should handle whitespace-only message body', async () => {
+    it('should handle empty message body for group messages', async () => {
+      mockMessage.body = '';
+      mockMessage.from = 'group-id@g.us'; // Group message
+      mockMessage.hasMedia = false;
+
+      const result = await messageHandler.handleMessage(mockMessage as Message);
+
+      expect(result.shouldRespond).toBe(false);
+      expect(mockResponseFormatter.formatForWhatsApp).not.toHaveBeenCalled();
+    });
+
+    it('should handle whitespace-only message body for individual messages', async () => {
       mockMessage.body = '   ';
+      mockMessage.from = '6281234567890@c.us'; // Individual message
       mockMessage.hasMedia = false;
 
       const result = await messageHandler.handleMessage(mockMessage as Message);
@@ -619,6 +751,17 @@ describe('MessageHandler', () => {
       expect(mockResponseFormatter.formatForWhatsApp).toHaveBeenCalledWith(
         'Halo! Ada yang bisa saya bantu? tolong panggil saya dengan menyebut "wulang" dalam pesan'
       );
+    });
+
+    it('should handle whitespace-only message body for group messages', async () => {
+      mockMessage.body = '   ';
+      mockMessage.from = 'group-id@g.us'; // Group message
+      mockMessage.hasMedia = false;
+
+      const result = await messageHandler.handleMessage(mockMessage as Message);
+
+      expect(result.shouldRespond).toBe(false);
+      expect(mockResponseFormatter.formatForWhatsApp).not.toHaveBeenCalled();
     });
 
     it('should handle very long message body', async () => {

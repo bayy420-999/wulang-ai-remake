@@ -1,4 +1,5 @@
 import { IUserRepository } from '../../domain/interfaces/repositories/IUserRepository';
+import { IGroupRepository } from '../../domain/interfaces/repositories/IGroupRepository';
 import { IConversationRepository } from '../../domain/interfaces/repositories/IConversationRepository';
 import { IMessageRepository } from '../../domain/interfaces/repositories/IMessageRepository';
 import { IAIService } from '../../domain/interfaces/services/IAIService';
@@ -18,6 +19,7 @@ export class ConversationManager {
 
   constructor(
     private userRepository: IUserRepository,
+    private groupRepository: IGroupRepository,
     private conversationRepository: IConversationRepository,
     private messageRepository: IMessageRepository,
     private aiService: IAIService
@@ -44,20 +46,59 @@ export class ConversationManager {
     return user;
   }
 
-  async getOrCreateActiveConversation(userId: string) {
-    logDebug(`🔍 Looking up active conversation for user: ${userId}`, 'ConversationManager');
+  async getOrCreateGroup(groupId: string, name?: string) {
+    logDebug(`🔍 Looking up group by group ID: ${groupId}`, 'ConversationManager');
     
-    let conversation = await this.conversationRepository.findActiveByUserId(userId);
+    let group = await this.groupRepository.findByGroupId(groupId);
     
-    if (!conversation) {
-      logInfo(`💬 No active conversation found, creating new conversation for user: ${userId}`, 'ConversationManager');
-      conversation = await this.conversationRepository.create({ userId });
-      logInfo(`✅ Created new conversation: ${conversation.id} for user: ${userId}`, 'ConversationManager');
+    if (!group) {
+      logInfo(`👥 Group not found, creating new group: ${groupId}`, 'ConversationManager');
+      group = await this.groupRepository.create({ groupId, name });
+      logInfo(`✅ Created new group: ${group.name || 'Unknown'} (${groupId})`, 'ConversationManager');
     } else {
-      logInfo(`💬 Found existing active conversation: ${conversation.id} for user: ${userId}`, 'ConversationManager');
+      logInfo(`👥 Found existing group: ${group.name || 'Unknown'} (${groupId})`, 'ConversationManager');
+      if (name && !group.name) {
+        logInfo(`📝 Updating group name from '${group.name}' to '${name}'`, 'ConversationManager');
+        group = await this.groupRepository.update(group.id, { name });
+        logInfo(`✅ Updated group name: ${group.name} (${groupId})`, 'ConversationManager');
+      }
     }
 
-    return conversation;
+    return group;
+  }
+
+  async getOrCreateActiveConversation(userId?: string, groupId?: string) {
+    if (userId) {
+      logDebug(`🔍 Looking up active conversation for user: ${userId}`, 'ConversationManager');
+      
+      let conversation = await this.conversationRepository.findActiveByUserId(userId);
+      
+      if (!conversation) {
+        logInfo(`💬 No active conversation found, creating new conversation for user: ${userId}`, 'ConversationManager');
+        conversation = await this.conversationRepository.create({ userId });
+        logInfo(`✅ Created new conversation: ${conversation.id} for user: ${userId}`, 'ConversationManager');
+      } else {
+        logInfo(`💬 Found existing active conversation: ${conversation.id} for user: ${userId}`, 'ConversationManager');
+      }
+
+      return conversation;
+    } else if (groupId) {
+      logDebug(`🔍 Looking up active conversation for group: ${groupId}`, 'ConversationManager');
+      
+      let conversation = await this.conversationRepository.findActiveByGroupId(groupId);
+      
+      if (!conversation) {
+        logInfo(`💬 No active conversation found, creating new conversation for group: ${groupId}`, 'ConversationManager');
+        conversation = await this.conversationRepository.create({ groupId });
+        logInfo(`✅ Created new conversation: ${conversation.id} for group: ${groupId}`, 'ConversationManager');
+      } else {
+        logInfo(`💬 Found existing active conversation: ${conversation.id} for group: ${groupId}`, 'ConversationManager');
+      }
+
+      return conversation;
+    } else {
+      throw new Error('Either userId or groupId must be provided');
+    }
   }
 
   async getConversationContext(conversationId: string, userPhone: string, userName?: string): Promise<ConversationContextDto> {

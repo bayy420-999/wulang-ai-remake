@@ -3,6 +3,7 @@ import { prisma } from '../../lib/db';
 
 // Repositories
 import { PrismaUserRepository } from '../../infrastructure/database/repositories/PrismaUserRepository';
+import { PrismaGroupRepository } from '../../infrastructure/database/repositories/PrismaGroupRepository';
 import { PrismaConversationRepository } from '../../infrastructure/database/repositories/PrismaConversationRepository';
 import { PrismaMessageRepository } from '../../infrastructure/database/repositories/PrismaMessageRepository';
 import { PrismaMediaRepository } from '../../infrastructure/database/repositories/PrismaMediaRepository';
@@ -27,6 +28,7 @@ import { WhatsAppBot } from '../../presentation/WhatsAppBot';
 export function setupDependencyInjection(): void {
   // Register repositories
   container.register('IUserRepository', new PrismaUserRepository(prisma));
+  container.register('IGroupRepository', new PrismaGroupRepository(prisma));
   container.register('IConversationRepository', new PrismaConversationRepository(prisma));
   container.register('IMessageRepository', new PrismaMessageRepository(prisma));
   container.register('IMediaRepository', new PrismaMediaRepository(prisma));
@@ -39,6 +41,7 @@ export function setupDependencyInjection(): void {
   // Register use cases
   container.register('ProcessMessageUseCase', new ProcessMessageUseCase(
     container.get('IUserRepository'),
+    container.get('IGroupRepository'),
     container.get('IConversationRepository'),
     container.get('IMessageRepository'),
     container.get('IMediaRepository'),
@@ -55,6 +58,7 @@ export function setupDependencyInjection(): void {
   // Register application services
   container.register('ConversationManager', new ConversationManager(
     container.get('IUserRepository'),
+    container.get('IGroupRepository'),
     container.get('IConversationRepository'),
     container.get('IMessageRepository'),
     container.get('IAIService')

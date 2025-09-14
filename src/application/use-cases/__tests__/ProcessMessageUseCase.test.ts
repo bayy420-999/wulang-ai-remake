@@ -55,6 +55,7 @@ describe('ProcessMessageUseCase', () => {
     // Create the use case with mocked dependencies
     useCase = new ProcessMessageUseCase(
       mockUserRepository as any,
+      mockGroupRepository as any,
       mockConversationRepository as any,
       mockMessageRepository as any,
       mockMediaRepository as any,
